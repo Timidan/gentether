@@ -25,10 +25,10 @@ Comments such as `DO NOT EDIT` are hints. GenTether turns provenance into an enf
 | `api/openapi.yaml` | **REVIEW** | The source changed, but the generated output is missing. |
 | Both files | **ALLOW** | Source and generated output changed together. |
 
-Run the exact demo:
+Run the deterministic demo:
 
 ```bash
-npm install
+npm install --no-audit --no-fund
 npm run demo
 ```
 
@@ -43,31 +43,31 @@ Consumer ──IMPORTS─────> GeneratedArtifact
 Test ──IMPORTS*1..4────> GeneratedArtifact
 ```
 
-The live HydraDB adapter:
+The HydraDB adapter:
 
 - upserts every artifact as a stable integer-id vertex;
 - writes `FEEDS`, `GENERATES`, `DECLARES`, `IMPORTS`, `VERIFIES` and `CONTAINS` relationships;
-- executes bounded reverse-import traversal for downstream impact;
-- executes source-command-output joins for provenance;
-- rebuilds live source, command, output, consumer and test sets from HydraDB response rows;
-- downgrades a decision to `REVIEW` when the live graph cannot prove the expected lineage;
-- labels an answer `hydradb` only after a successful live round trip.
+- performs bounded reverse-import traversal for downstream impact;
+- performs source-command-output joins for provenance;
+- rebuilds live evidence from HydraDB response rows;
+- downgrades a decision to `REVIEW` when the live graph cannot prove expected lineage;
+- labels an answer `hydradb` only after successful ingestion and retrieval.
 
-When HydraDB is absent, GenTether uses the same deterministic snapshot in memory and clearly labels the engine `memory`. The fallback keeps local development usable without pretending the sponsor integration is active.
+Without HydraDB, GenTether loses the persisted typed provenance graph, directed multi-hop impact traversal and database-backed evidence used to justify the gate decision. The local memory implementation exists only as an explicitly labelled development fallback.
 
-See [`docs/HYDRA_QUERIES.md`](docs/HYDRA_QUERIES.md) for the exact queries.
+Exact queries: [`docs/HYDRA_QUERIES.md`](docs/HYDRA_QUERIES.md).
 
 ## Quick start
 
 Requirements:
 
 - Node.js 20+
-- TypeScript 5.9+ through `npm install`
+- npm
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/Timidan/gentether.git
 cd gentether
-npm install
+npm install --no-audit --no-fund
 npm test
 npm run build
 npm start
@@ -81,9 +81,9 @@ The default repository is the bundled fixture at `fixtures/checkout-app`. Index 
 GENTETHER_REPO=/absolute/path/to/repository npm start
 ```
 
-## Run with HydraDB
+## Run with HydraDB OSS
 
-The repository includes Docker configuration based on HydraDB's local-development runtime.
+The repository includes local configuration for HydraDB's official open-source container image.
 
 ```bash
 bash scripts/start-hydra.sh
@@ -94,20 +94,27 @@ GENTETHER_REPO=./fixtures/checkout-app \
 npm start
 ```
 
-Or run both services:
+Or run the complete stack:
 
 ```bash
 bash scripts/init-hydra-data.sh
 docker compose up --build
 ```
 
-After HydraDB becomes ready, use the circular re-index button in the web app or call:
+After HydraDB becomes ready, re-index:
 
 ```bash
 curl -X POST http://127.0.0.1:8787/api/reindex
+curl http://127.0.0.1:8787/api/status
 ```
 
-The status pill will change from `Deterministic fallback · local` to `HydraDB · live` only after graph ingestion succeeds.
+The interface changes from `Deterministic fallback · local` to `HydraDB · live` only after graph ingestion succeeds.
+
+Run the dedicated live verification with:
+
+```bash
+bash scripts/verify-hydra-live.sh
+```
 
 ## Agent integration through MCP
 
@@ -135,11 +142,9 @@ Example MCP configuration:
 }
 ```
 
-Tools:
-
 | Tool | Use |
 |---|---|
-| `gentether_resolve_edit_target` | Resolve the real source, generation command, outputs, consumers and tests. |
+| `gentether_resolve_edit_target` | Resolve the source, generation command, outputs, consumers and tests. |
 | `gentether_check_patch` | Return `BLOCK`, `REVIEW` or `ALLOW` before a patch is written. |
 | `gentether_plan_regeneration` | Produce the regeneration and verification plan. |
 
@@ -153,7 +158,7 @@ The stdio server supports JSON-RPC initialization, `tools/list`, `tools/call`, `
 | `GET` | `/api/generated` | Detected generated artifacts. |
 | `GET` | `/api/lineage?file=...` | Provenance and downstream impact. |
 | `POST` | `/api/analyze` | Gate `{ "changedFiles": [...] }`. |
-| `POST` | `/api/reindex` | Rescan and re-ingest the allowed repository root. |
+| `POST` | `/api/reindex` | Rescan and re-ingest the configured repository root. |
 | `GET` | `/api/demo` | Return all three demo scenarios. |
 
 The API does not accept an arbitrary repository path. The allowed root is fixed at process startup through `GENTETHER_REPO`.
@@ -170,11 +175,11 @@ The MVP recognizes:
 - source hints and regeneration commands embedded in generated headers;
 - JavaScript and TypeScript static imports, including multi-hop reverse traversal to tests.
 
-## Deliberate MVP cuts
+## Deliberate MVP boundaries
 
-GenTether does **not** claim full language-semantic resolution. The current scanner focuses on JavaScript/TypeScript import graphs and generator provenance that can be demonstrated reliably in under three minutes. Future adapters can add compiler-backed call graphs, Bazel actions, Gradle tasks, protobuf descriptors and cross-repository contracts without changing the gate model.
+GenTether does not claim full language-semantic resolution. The current scanner focuses on JavaScript and TypeScript import graphs and generator provenance that can be demonstrated reliably in under three minutes. Dynamic imports, path aliases, reflection and runtime-generated relationships may be unresolved; missing evidence returns `REVIEW`, never a false `ALLOW`.
 
-It also does not let an LLM generate unrestricted Cypher. Queries are fixed, typed and bounded.
+The application also never lets an LLM generate unrestricted Cypher. Queries are fixed, typed and bounded.
 
 ## Architecture
 
@@ -202,27 +207,42 @@ More detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 npm test
 ```
 
-The test suite covers:
+The deterministic suite verifies the three gate decisions, multi-hop consumer/test discovery, scanner behavior, HydraDB query construction and live-evidence response decoding. The separate live workflow runs against the official HydraDB OSS image.
 
-- exact source → command → output extraction;
-- generated-string false-positive prevention;
-- all three patch-gate decisions;
-- multi-hop consumer and test traversal;
-- HydraDB node/relationship writes and bounded query construction;
-- HydraDB response-row decoding and live gate reconstruction;
-- fail-closed downgrade when live provenance is incomplete.
+## Remotion demo video
 
-The live HydraDB integration requires Docker and is separate from the deterministic unit suite.
+The pitch and demo are authored as a **2:25.5 Remotion composition** with synchronized narration and captions.
 
-## Demo and submission material
+```bash
+npm run video:check
+npm run video:narration
+npm run video:studio
+npm run video:render
+```
 
-- [`docs/IDEATION.md`](docs/IDEATION.md) — adversarial idea selection and saturation scan
-- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — sub-three-minute demo script
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — components, boundaries and failure modes
-- [`docs/HYDRA_QUERIES.md`](docs/HYDRA_QUERIES.md) — exact load-bearing graph operations
-- [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) — final Hack Hydra checklist
-- [`docs/BUILD_REPORT.md`](docs/BUILD_REPORT.md) — dated verification record and known limits
+The output is written to `demo/gentether-demo.mp4`. GitHub Actions also publishes the rendered MP4 as the `gentether-demo-video` workflow artifact.
+
+Video source:
+
+- `video/GenTetherDemo.tsx`
+- `video/Root.tsx`
+- `video/data.ts`
+- `scripts/generate-narration.sh` (creates `public/video/audio/` before rendering)
+
+## Submission readiness
+
+The live requirements checklist is maintained in [`docs/HACKATHON.md`](docs/HACKATHON.md). The repository must be made public and the rendered video must be uploaded to a judge-accessible URL before the official submission form is sent.
+
+## Attribution
+
+- **HydraDB OSS** — [`hydra-db/hydradb`](https://github.com/hydra-db/hydradb), AGPL-3.0. Run as a separate service through its official container image and authenticated HTTP query API. No HydraDB source is vendored.
+- **Remotion 4.0.506** — used to author and render the demo video. Third-party licence terms remain with the upstream project.
+- **React / React DOM 19.2.8** — MIT, used only by the Remotion composition.
+- **TypeScript 5.9.2** — Apache-2.0, used for the application and video source.
+- **Node.js** — runtime for the application, MCP server and build scripts.
+- **eSpeak NG** — used by the render workflow to synthesize narration; generated audio is not committed to this repository.
+- The bundled `fixtures/checkout-app` corpus and all GenTether application code were authored for this hackathon project. No external dataset is redistributed.
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+GenTether application source is licensed under MIT. See [`LICENSE`](LICENSE). Third-party dependencies retain their own licences.

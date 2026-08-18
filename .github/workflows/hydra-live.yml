@@ -1,0 +1,33 @@
+name: Live HydraDB verification
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "fixtures/**"
+      - "package.json"
+      - ".github/workflows/hydra-live.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "fixtures/**"
+      - "package.json"
+      - ".github/workflows/hydra-live.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-hydradb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run verify:hydra

@@ -1,6 +1,6 @@
 {
   "name": "gentether",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A graph-native provenance gate that keeps coding agents from editing generated artifacts directly.",
   "type": "module",
@@ -14,10 +14,22 @@
     "check": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test dist/tests/*.test.js",
     "demo": "npm run build && node dist/scripts/demo.js",
-    "mcp": "npm run build && node dist/src/mcp.js"
+    "mcp": "npm run build && node dist/src/mcp.js",
+    "video:studio": "remotion studio video/index.ts",
+    "video:check": "tsc -p video/tsconfig.json",
+    "video:render": "remotion render video/index.ts GenTetherDemo demo/gentether-demo.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --concurrency=2",
+    "verify:hydra": "bash scripts/verify-hydra-live.sh",
+    "audit": "node scripts/audit-submission.mjs",
+    "video:narration": "bash scripts/generate-narration.sh"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "@remotion/cli": "4.0.506",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.1.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.506",
+    "typescript": "5.9.2"
   },
   "license": "MIT"
 }

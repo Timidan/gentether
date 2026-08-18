@@ -5,3 +5,7 @@ dist/
 coverage/
 *.log
 .DS_Store
+demo/*.mp4
+public/video/audio/*.mp3
+remotion-bundle/
+.narration-tmp/
