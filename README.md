@@ -81,6 +81,12 @@ The default repository is the bundled fixture at `fixtures/checkout-app`. Index 
 GENTETHER_REPO=/absolute/path/to/repository npm start
 ```
 
+## Product UI
+
+The browser surface is the judge-facing and human-facing product experience. It includes the live patch gate, generated-artifact lineage trace, repository metrics, HydraDB status, and links to the agent-native tools.
+
+The interface uses flat editorial surfaces, restrained scroll-led motion, a reduced-motion fallback, and pinned Phosphor Icons. The repository audit rejects CSS gradients, decorative status dots, pill-heavy controls, missing icon integration, and missing scroll choreography.
+
 ## Run with HydraDB OSS
 
 The repository includes local configuration for HydraDB's official open-source container image.
@@ -236,6 +242,7 @@ The live requirements checklist is maintained in [`docs/HACKATHON.md`](docs/HACK
 ## Attribution
 
 - **HydraDB OSS** — [`hydra-db/hydradb`](https://github.com/hydra-db/hydradb), AGPL-3.0. Run as a separate service through its official container image and authenticated HTTP query API. No HydraDB source is vendored.
+- **Phosphor Icons Web 2.1.2** — MIT, loaded as pinned regular and fill stylesheets for the browser interface.
 - **Remotion 4.0.506** — used to author and render the demo video. Third-party licence terms remain with the upstream project.
 - **React / React DOM 19.2.8** — MIT, used only by the Remotion composition.
 - **TypeScript 5.9.2** — Apache-2.0, used for the application and video source.
