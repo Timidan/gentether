@@ -14,8 +14,11 @@ if (!hydra) {
 const service = await GenTetherService.create(fixture, { hydra });
 const status = service.status();
 
-assert.equal(status.engine, "hydradb", `Expected HydraDB, received ${status.engine}: ${JSON.stringify(status.warnings)}`);
-assert.equal(status.hydraConnected, true);
+if (status.engine !== "hydradb" || !status.hydraConnected) {
+  console.error("HydraDB live verification fell back to memory:");
+  console.error(JSON.stringify(status, null, 2));
+  throw new Error("HydraDB ingestion did not complete; inspect the fallback warning above.");
+}
 
 const generatedPath = "src/generated/api-client.ts";
 const lineage = await service.lineage(generatedPath);
