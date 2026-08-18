@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - ui-screenshot-preview
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "public/**"
+      - "src/**"
+      - "package.json"
+      - ".github/workflows/capture-ui-preview.yml"
   workflow_dispatch:
 
 permissions:
