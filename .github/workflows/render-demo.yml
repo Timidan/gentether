@@ -7,7 +7,16 @@ on:
       - "public/video/**"
       - "package.json"
       - ".github/workflows/render-demo.yml"
+  pull_request:
+    paths:
+      - "video/**"
+      - "public/video/**"
+      - "package.json"
+      - ".github/workflows/render-demo.yml"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   render:
