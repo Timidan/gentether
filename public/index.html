@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="GenTether is a graph-native provenance gate that keeps coding agents from editing generated artifacts directly."
+    />
+    <title>GenTether · Edit the source, never the artifact</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="GenTether home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>GenTether</span>
+      </a>
+      <div class="engine-pill" id="engine-pill">
+        <span class="engine-dot"></span>
+        <span id="engine-label">Indexing graph…</span>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero shell">
+        <div class="eyebrow">Hack Hydra · Track 02B</div>
+        <h1>Edit the source.<br /><em>Never the artifact.</em></h1>
+        <p class="hero-copy">
+          A provenance gate for coding agents. GenTether traces generated code back to the schema,
+          template and command that own it—then finds every consumer and test before the patch lands.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#gate">Try the patch gate</a>
+          <button class="button button-secondary" id="load-lineage" type="button">Trace the demo graph</button>
+        </div>
+        <div class="metric-row" id="metrics" aria-live="polite">
+          <div><strong>—</strong><span>files indexed</span></div>
+          <div><strong>—</strong><span>generated artifacts</span></div>
+          <div><strong>—</strong><span>typed relationships</span></div>
+        </div>
+      </section>
+
+      <section class="problem shell">
+        <div class="section-label">The failure mode</div>
+        <div class="problem-grid">
+          <h2>A generated file looks editable.<br />That is exactly the problem.</h2>
+          <div class="problem-copy">
+            <p>
+              A coding agent sees a TypeScript client, fixes the visible line, and passes a local check.
+              The next codegen run silently deletes the fix.
+            </p>
+            <p>
+              GenTether turns provenance into a typed graph and makes the graph a pre-write decision,
+              not a comment someone hopes the agent notices.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace shell" id="gate">
+        <div class="workspace-head">
+          <div>
+            <div class="section-label">Live patch gate</div>
+            <h2>What is the agent about to change?</h2>
+          </div>
+          <button class="icon-button" id="reindex" type="button" title="Re-index repository" aria-label="Re-index repository">↻</button>
+        </div>
+
+        <div class="demo-tabs" role="tablist" aria-label="Patch examples">
+          <button class="demo-tab active" data-example="blocked" type="button">
+            <span class="tab-dot danger"></span>Generated only
+          </button>
+          <button class="demo-tab" data-example="review" type="button">
+            <span class="tab-dot warning"></span>Source only
+          </button>
+          <button class="demo-tab" data-example="allowed" type="button">
+            <span class="tab-dot success"></span>Source + output
+          </button>
+        </div>
+
+        <div class="gate-grid">
+          <div class="editor-card panel">
+            <div class="panel-title">
+              <span>Changed paths</span>
+              <code>one path per line</code>
+            </div>
+            <textarea id="changed-files" spellcheck="false">src/generated/api-client.ts</textarea>
+            <button class="button button-primary full" id="analyze" type="button">Analyze proposed patch</button>
+          </div>
+
+          <div class="decision-card panel" id="decision-card">
+            <div class="decision-topline">
+              <span class="decision-kicker">Gate decision</span>
+              <span class="decision-engine" id="decision-engine">—</span>
+            </div>
+            <div class="decision-word neutral" id="decision-word">READY</div>
+            <p class="decision-summary" id="decision-summary">Choose an example or analyze the changed paths.</p>
+            <div class="reason-list" id="reason-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lineage shell" id="lineage">
+        <div class="lineage-copy">
+          <div class="section-label">Graph evidence</div>
+          <h2>One edit target.<br />The full chain of custody.</h2>
+          <p>
+            Similar text cannot prove where generated code came from. GenTether follows typed
+            <code>FEEDS</code>, <code>GENERATES</code> and <code>IMPORTS</code> edges instead.
+          </p>
+          <label for="lineage-file">Trace an indexed artifact</label>
+          <div class="select-row">
+            <select id="lineage-file"></select>
+            <button class="button button-secondary" id="trace" type="button">Trace</button>
+          </div>
+        </div>
+        <div class="graph-panel panel" id="graph-panel">
+          <div class="graph-empty">
+            <span class="graph-empty-mark">↳</span>
+            <p>Run the trace to see authoritative source, generator, artifact, consumers and tests.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="agent-section shell">
+        <div class="section-label">Agent-native</div>
+        <div class="agent-grid">
+          <div>
+            <h2>Put the gate inside the coding loop.</h2>
+            <p>
+              GenTether ships an MCP server, a web API and a deterministic CLI-ready core. The agent
+              asks before writing—not after CI discovers the generated diff was wrong.
+            </p>
+          </div>
+          <div class="tool-list">
+            <div><code>gentether_resolve_edit_target</code><span>Find the real edit surface</span></div>
+            <div><code>gentether_check_patch</code><span>Block, review or allow</span></div>
+            <div><code>gentether_plan_regeneration</code><span>Return commands and tests</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell">
+      <span>GenTether · built for Hack Hydra 2026</span>
+      <span>Graph truth over plausible guesses.</span>
+    </footer>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

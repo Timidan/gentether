@@ -1,0 +1,9 @@
+{
+  "name": "checkout-app-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:api": "node tools/generate-client.mjs",
+    "test": "vitest run"
+  }
+}

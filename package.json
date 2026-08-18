@@ -1,0 +1,23 @@
+{
+  "name": "gentether",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A graph-native provenance gate that keeps coding agents from editing generated artifacts directly.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run build && node --watch dist/src/server.js",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "demo": "npm run build && node dist/scripts/demo.js",
+    "mcp": "npm run build && node dist/src/mcp.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  },
+  "license": "MIT"
+}
