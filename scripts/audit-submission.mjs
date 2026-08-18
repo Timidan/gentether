@@ -49,8 +49,10 @@ const readme = readFileSync(path.join(root, "README.md"), "utf8");
 for (const phrase of [
   "Track 02B",
   "Why HydraDB is load-bearing",
+  "Product UI",
   "Run with HydraDB OSS",
   "Remotion demo video",
+  "Phosphor Icons Web 2.1.2",
   "Attribution",
   "License",
 ]) {
@@ -61,16 +63,18 @@ const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "ut
 check("license:package", packageJson.license === "MIT", "package.json must declare MIT");
 check("remotion:package", packageJson.devDependencies?.remotion === "4.0.506", "Remotion must be pinned to 4.0.506");
 check("remotion:cli", packageJson.devDependencies?.["@remotion/cli"] === "4.0.506", "@remotion/cli must match Remotion");
+check("phosphor:package", packageJson.dependencies?.["@phosphor-icons/web"] === "2.1.2", "@phosphor-icons/web must be pinned to 2.1.2");
 check("script:render", typeof packageJson.scripts?.["video:render"] === "string", "video:render must exist");
 check("script:live-hydra", typeof packageJson.scripts?.["verify:hydra"] === "string", "verify:hydra must exist");
 
 const uiHtml = readFileSync(path.join(root, "public/index.html"), "utf8");
 const uiCss = readFileSync(path.join(root, "public/styles.css"), "utf8");
 const uiJs = readFileSync(path.join(root, "public/app.js"), "utf8");
+const serverSource = readFileSync(path.join(root, "src/server.ts"), "utf8");
 check(
   "ui:phosphor-icons",
-  uiHtml.includes("@phosphor-icons/web@2.1.2"),
-  "Phosphor Icons must be pinned to @phosphor-icons/web@2.1.2",
+  uiHtml.includes("/vendor/phosphor/src/regular/style.css") && serverSource.includes("@phosphor-icons"),
+  "Phosphor Icons must be served locally from the pinned package",
 );
 check(
   "ui:no-css-gradients",
