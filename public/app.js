@@ -4,7 +4,25 @@ const examples = {
   allowed: ["api/openapi.yaml", "src/generated/api-client.ts"],
 };
 
+const decisionIcons = {
+  BLOCK: "ph-prohibit",
+  REVIEW: "ph-warning",
+  ALLOW: "ph-check-circle",
+};
+
+const nodeIcons = {
+  source_spec: "ph-file-text",
+  generator_config: "ph-sliders-horizontal",
+  generator_command: "ph-terminal-window",
+  generated_file: "ph-file-code",
+  test: "ph-test-tube",
+  repository: "ph-folder-open",
+  file: "ph-code",
+};
+
 const elements = {
+  scrollProgress: document.querySelector("#scroll-progress"),
+  topbar: document.querySelector("#topbar"),
   enginePill: document.querySelector("#engine-pill"),
   engineLabel: document.querySelector("#engine-label"),
   metrics: document.querySelector("#metrics"),
@@ -12,6 +30,7 @@ const elements = {
   analyze: document.querySelector("#analyze"),
   reindex: document.querySelector("#reindex"),
   decisionCard: document.querySelector("#decision-card"),
+  decisionIcon: document.querySelector("#decision-icon"),
   decisionWord: document.querySelector("#decision-word"),
   decisionSummary: document.querySelector("#decision-summary"),
   decisionEngine: document.querySelector("#decision-engine"),
@@ -30,15 +49,15 @@ async function api(path, options) {
 }
 
 async function boot() {
+  setupCinematicMotion();
   try {
     const [status, generated] = await Promise.all([api("/api/status"), api("/api/generated")]);
     renderStatus(status);
-    elements.lineageFile.innerHTML = generated.files
-      .map((file) => `<option value="${escapeHtml(file)}">${escapeHtml(file)}</option>`)
-      .join("");
+    renderGeneratedFiles(generated.files);
     await analyze();
   } catch (error) {
     elements.engineLabel.textContent = `Unavailable · ${error.message}`;
+    renderError(error);
   }
 }
 
@@ -51,10 +70,21 @@ function renderStatus(status) {
   });
 }
 
+function renderGeneratedFiles(files) {
+  const previous = elements.lineageFile.value;
+  elements.lineageFile.innerHTML = files
+    .map((file) => `<option value="${escapeHtml(file)}">${escapeHtml(file)}</option>`)
+    .join("");
+  if (files.includes(previous)) elements.lineageFile.value = previous;
+}
+
 async function analyze() {
   setLoading(elements.decisionCard, true);
   try {
-    const changedFiles = elements.changedFiles.value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    const changedFiles = elements.changedFiles.value
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean);
     const result = await api("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,10 +99,13 @@ async function analyze() {
 }
 
 function renderDecision(result) {
-  const decision = result.decision.toLowerCase();
-  elements.decisionWord.className = `decision-word ${decision}`;
+  const state = result.decision.toLowerCase();
+  elements.decisionCard.dataset.state = state;
+  elements.decisionWord.className = `decision-word ${state}`;
   elements.decisionWord.textContent = result.decision;
+  elements.decisionIcon.className = `ph ${decisionIcons[result.decision] ?? "ph-git-diff"}`;
   elements.decisionEngine.textContent = `${result.engine} evidence`;
+
   const summaries = {
     BLOCK: "The patch targets a derived artifact without changing its authoritative source.",
     REVIEW: "The provenance chain is incomplete or regenerated outputs are missing.",
@@ -80,14 +113,20 @@ function renderDecision(result) {
   };
   elements.decisionSummary.textContent = summaries[result.decision];
   elements.reasonList.innerHTML = result.reasons
-    .map((reason) => `<div class="reason">${escapeHtml(reason)}</div>`)
+    .map(
+      (reason) =>
+        `<div class="reason"><i class="ph ph-arrow-right" aria-hidden="true"></i><span>${escapeHtml(reason)}</span></div>`,
+    )
     .join("");
 }
 
 function renderError(error) {
+  elements.decisionCard.dataset.state = "block";
+  elements.decisionIcon.className = "ph ph-warning";
   elements.decisionWord.className = "decision-word block";
   elements.decisionWord.textContent = "ERROR";
   elements.decisionSummary.textContent = error.message;
+  elements.decisionEngine.textContent = "request failed";
   elements.reasonList.innerHTML = "";
 }
 
@@ -99,7 +138,11 @@ async function trace() {
     const result = await api(`/api/lineage?file=${encodeURIComponent(file)}`);
     renderLineage(result);
   } catch (error) {
-    elements.graphPanel.innerHTML = `<div class="graph-empty"><span class="graph-empty-mark">!</span><p>${escapeHtml(error.message)}</p></div>`;
+    elements.graphPanel.innerHTML = `
+      <div class="graph-empty">
+        <i class="ph ph-warning" aria-hidden="true"></i>
+        <p>${escapeHtml(error.message)}</p>
+      </div>`;
   } finally {
     setLoading(elements.graphPanel, false);
   }
@@ -111,16 +154,57 @@ function renderLineage(result) {
   const output = result.generatedOutputs.find((node) => node.path === result.target.path) ?? result.target;
   const consumer = result.consumers[0];
   const test = result.tests[0];
-  const chain = [primarySource, command, output, consumer, test].filter(Boolean);
-  const labels = ["FEEDS", "GENERATES", "IMPORTED BY", "VERIFIED BY"];
+  const steps = [
+    { node: primarySource, edge: null },
+    { node: command, edge: "FEEDS" },
+    { node: output, edge: "GENERATES" },
+    { node: consumer, edge: "IMPORTED BY" },
+    { node: test, edge: "VERIFIED BY" },
+  ].filter((step) => Boolean(step.node));
+
+  if (steps.length === 0) {
+    elements.graphPanel.innerHTML = `
+      <div class="graph-empty">
+        <i class="ph ph-file-x" aria-hidden="true"></i>
+        <p>No graph evidence was returned for this artifact.</p>
+      </div>`;
+    return;
+  }
+
   let html = '<div class="graph-flow">';
-  chain.forEach((node, index) => {
-    html += `<div class="graph-node ${escapeHtml(node.kind)}"><small>${escapeHtml(prettyKind(node.kind))}</small><strong>${escapeHtml(node.path || node.name)}</strong></div>`;
-    if (index < chain.length - 1) html += `<div class="graph-edge"><span>${labels[index] ?? "REACHES"}</span></div>`;
+  steps.forEach((step, index) => {
+    if (index > 0) {
+      html += `
+        <div class="graph-edge">
+          <span><i class="ph ph-arrow-down" aria-hidden="true"></i>${escapeHtml(step.edge ?? "REACHES")}</span>
+        </div>`;
+    }
+    const icon = nodeIcons[step.node.kind] ?? "ph-file";
+    html += `
+      <div class="graph-node ${escapeHtml(step.node.kind)}" style="--node-index:${index}">
+        <span class="graph-node-icon"><i class="ph ${icon}" aria-hidden="true"></i></span>
+        <small>${escapeHtml(prettyKind(step.node.kind))}</small>
+        <strong>${escapeHtml(step.node.path || step.node.name)}</strong>
+      </div>`;
   });
   html += "</div>";
-  html += `<div class="graph-meta">${result.paths.length} evidence paths · ${result.consumers.length} consumers · ${result.tests.length} tests · engine: ${escapeHtml(result.engine)}</div>`;
+
+  html += `
+    <div class="graph-ledger">
+      ${ledgerRow("Consumers", result.consumers.map((node) => node.path))}
+      ${ledgerRow("Tests", result.tests.map((node) => node.path))}
+      ${ledgerRow("Engine", [result.engine])}
+    </div>
+    <div class="graph-meta">
+      ${result.paths.length} evidence paths · ${result.consumers.length} consumers · ${result.tests.length} tests
+    </div>`;
+
   elements.graphPanel.innerHTML = html;
+}
+
+function ledgerRow(label, values) {
+  const rendered = values.length > 0 ? values.map((value) => `<span>${escapeHtml(value)}</span>`).join("") : "<span>none</span>";
+  return `<div class="ledger-row"><span>${escapeHtml(label)}</span><div class="ledger-items">${rendered}</div></div>`;
 }
 
 function prettyKind(kind) {
@@ -129,6 +213,57 @@ function prettyKind(kind) {
 
 function setLoading(element, loading) {
   element.classList.toggle("loading", loading);
+}
+
+function setupCinematicMotion() {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  requestAnimationFrame(() => document.body.classList.add("is-ready"));
+
+  const revealElements = [...document.querySelectorAll("[data-reveal]")];
+  if (reducedMotion || !("IntersectionObserver" in window)) {
+    revealElements.forEach((element) => element.classList.add("is-visible"));
+  } else {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.14, rootMargin: "0px 0px -8% 0px" },
+    );
+    revealElements.forEach((element) => observer.observe(element));
+  }
+
+  let frameRequested = false;
+  const updateScrollMotion = () => {
+    frameRequested = false;
+    const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const progress = Math.min(1, Math.max(0, window.scrollY / scrollable));
+    elements.scrollProgress.style.transform = `scaleX(${progress})`;
+    elements.topbar.classList.toggle("is-condensed", window.scrollY > 48);
+
+    if (!reducedMotion) {
+      document.querySelectorAll("[data-parallax]").forEach((element) => {
+        const factor = Number.parseFloat(element.dataset.parallax ?? "0");
+        const rect = element.getBoundingClientRect();
+        const distanceFromCenter = rect.top + rect.height / 2 - window.innerHeight / 2;
+        const offset = Math.max(-76, Math.min(76, distanceFromCenter * factor));
+        element.style.setProperty("--parallax-y", `${offset.toFixed(2)}px`);
+      });
+    }
+  };
+
+  const requestScrollUpdate = () => {
+    if (frameRequested) return;
+    frameRequested = true;
+    requestAnimationFrame(updateScrollMotion);
+  };
+
+  window.addEventListener("scroll", requestScrollUpdate, { passive: true });
+  window.addEventListener("resize", requestScrollUpdate);
+  updateScrollMotion();
 }
 
 function escapeHtml(value) {
@@ -142,9 +277,15 @@ function escapeHtml(value) {
 
 document.querySelectorAll(".demo-tab").forEach((button) => {
   button.addEventListener("click", async () => {
-    document.querySelectorAll(".demo-tab").forEach((candidate) => candidate.classList.remove("active"));
+    const example = button.dataset.example;
+    if (!example || !examples[example]) return;
+    document.querySelectorAll(".demo-tab").forEach((candidate) => {
+      candidate.classList.remove("active");
+      candidate.setAttribute("aria-selected", "false");
+    });
     button.classList.add("active");
-    elements.changedFiles.value = examples[button.dataset.example].join("\n");
+    button.setAttribute("aria-selected", "true");
+    elements.changedFiles.value = examples[example].join("\n");
     await analyze();
   });
 });
@@ -152,17 +293,20 @@ document.querySelectorAll(".demo-tab").forEach((button) => {
 elements.analyze.addEventListener("click", analyze);
 elements.trace.addEventListener("click", trace);
 elements.loadLineage.addEventListener("click", () => {
-  document.querySelector("#lineage").scrollIntoView({ behavior: "smooth" });
-  trace();
+  document.querySelector("#lineage")?.scrollIntoView({ behavior: "smooth" });
+  void trace();
 });
 elements.reindex.addEventListener("click", async () => {
-  elements.reindex.classList.add("loading");
+  elements.reindex.classList.add("is-spinning");
   try {
-    renderStatus(await api("/api/reindex", { method: "POST" }));
+    const status = await api("/api/reindex", { method: "POST" });
+    renderStatus(status);
+    const generated = await api("/api/generated");
+    renderGeneratedFiles(generated.files);
     await analyze();
   } finally {
-    elements.reindex.classList.remove("loading");
+    elements.reindex.classList.remove("is-spinning");
   }
 });
 
-boot();
+void boot();

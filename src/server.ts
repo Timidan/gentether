@@ -12,6 +12,7 @@ const projectRoot =
     : path.resolve(moduleDirectory, "..");
 const repositoryRoot = path.resolve(process.env.GENTETHER_REPO ?? path.join(projectRoot, "fixtures/checkout-app"));
 const publicDirectory = path.join(projectRoot, "public");
+const phosphorDirectory = path.join(projectRoot, "node_modules", "@phosphor-icons", "web");
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const service = await GenTetherService.create(repositoryRoot);
 
@@ -51,6 +52,9 @@ const server = createServer(async (request, response) => {
     }
 
     if (method !== "GET" && method !== "HEAD") return json(response, 405, { error: "Method not allowed." });
+    if (url.pathname.startsWith("/vendor/phosphor/")) {
+      return serveVendor(response, url.pathname, method === "HEAD");
+    }
     return serveStatic(response, url.pathname, method === "HEAD");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -83,22 +87,41 @@ async function readJsonBody(request: any): Promise<Record<string, unknown>> {
 
 async function serveStatic(response: any, pathname: string, headOnly: boolean): Promise<void> {
   const requested = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
-  const safePath = path.resolve(publicDirectory, requested);
-  if (!safePath.startsWith(`${path.resolve(publicDirectory)}${path.sep}`) && safePath !== path.join(publicDirectory, "index.html")) {
+  await serveFile(response, publicDirectory, requested, headOnly, true);
+}
+
+async function serveVendor(response: any, pathname: string, headOnly: boolean): Promise<void> {
+  const requested = pathname.slice("/vendor/phosphor/".length);
+  await serveFile(response, phosphorDirectory, requested, headOnly, false);
+}
+
+async function serveFile(
+  response: any,
+  directory: string,
+  requested: string,
+  headOnly: boolean,
+  fallbackToIndex: boolean,
+): Promise<void> {
+  const resolvedDirectory = path.resolve(directory);
+  const safePath = path.resolve(resolvedDirectory, requested);
+  if (!safePath.startsWith(`${resolvedDirectory}${path.sep}`)) {
     return json(response, 403, { error: "Forbidden." });
   }
+
   let finalPath = safePath;
   try {
     const stat = await fs.stat(finalPath);
     if (!stat.isFile()) throw new Error("not a file");
   } catch {
+    if (!fallbackToIndex) return json(response, 404, { error: "Asset not found." });
     finalPath = path.join(publicDirectory, "index.html");
   }
+
   const body = await fs.readFile(finalPath);
   response.writeHead(200, {
     "Content-Type": mimeType(finalPath),
     "Content-Length": body.length,
-    "Cache-Control": finalPath.endsWith("index.html") ? "no-cache" : "public, max-age=300",
+    "Cache-Control": finalPath.endsWith("index.html") ? "no-cache" : "public, max-age=86400, immutable",
     "X-Content-Type-Options": "nosniff",
   });
   response.end(headOnly ? undefined : body);
@@ -125,6 +148,9 @@ function mimeType(filePath: string): string {
     ".svg": "image/svg+xml",
     ".png": "image/png",
     ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
   };
   return types[extension] ?? "application/octet-stream";
 }
