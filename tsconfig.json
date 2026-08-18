@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022", "DOM"],
+    "types": [],
     "rootDir": ".",
     "outDir": "dist",
     "strict": true,
@@ -17,5 +18,5 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist", "fixtures"]
+  "exclude": ["node_modules", "dist", "fixtures", "video"]
 }

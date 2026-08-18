@@ -14,13 +14,20 @@ if (!hydra) {
 const service = await GenTetherService.create(fixture, { hydra });
 const status = service.status();
 
-assert.equal(status.engine, "hydradb", `Expected HydraDB, received ${status.engine}: ${JSON.stringify(status.warnings)}`);
-assert.equal(status.hydraConnected, true);
+if (status.engine !== "hydradb" || !status.hydraConnected) {
+  console.error("HydraDB live verification fell back to memory during ingestion:");
+  console.error(JSON.stringify(status, null, 2));
+  throw new Error("HydraDB ingestion did not complete; inspect the fallback warning above.");
+}
 
 const generatedPath = "src/generated/api-client.ts";
 const lineage = await service.lineage(generatedPath);
 if (!lineage) throw new Error(`Expected lineage for ${generatedPath}`);
-assert.equal(lineage.engine, "hydradb");
+if (lineage.engine !== "hydradb") {
+  console.error("HydraDB lineage traversal fell back to memory:");
+  console.error(JSON.stringify({ status: service.status(), lineageWarnings: lineage.warnings }, null, 2));
+  throw new Error("HydraDB lineage traversal failed; inspect the warning above.");
+}
 assert.ok(lineage.hydraQueries && lineage.hydraQueries.length >= 2, "Expected recorded HydraDB traversal queries");
 assert.deepEqual(lineage.sources.map((node) => node.path), ["api/openapi.yaml"]);
 assert.deepEqual(lineage.commands.map((node) => node.path), ["package.json#script:generate:api"]);
@@ -39,7 +46,11 @@ const scenarios = [
 
 for (const scenario of scenarios) {
   const result = await service.checkPatch([...scenario.files]);
-  assert.equal(result.engine, "hydradb", `Expected HydraDB evidence for ${scenario.files.join(", ")}`);
+  if (result.engine !== "hydradb") {
+    console.error("HydraDB patch gate fell back to memory:");
+    console.error(JSON.stringify({ files: scenario.files, status: service.status(), reasons: result.reasons }, null, 2));
+    throw new Error("HydraDB patch traversal failed; inspect the warning above.");
+  }
   assert.equal(result.decision, scenario.expected);
   assert.ok(result.hydraQueries && result.hydraQueries.length > 0, "Expected HydraDB queries in the gate result");
 }

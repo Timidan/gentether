@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   verify-live-hydradb:
+    name: Verify official HydraDB OSS image
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -29,5 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Confirm Docker runtime
+        run: docker version
       - run: npm install --no-audit --no-fund
       - run: npm run verify:hydra

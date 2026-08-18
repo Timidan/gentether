@@ -28,7 +28,7 @@ When sources differ, the stricter requirement is treated as binding. No deadline
 | Choose one official track | README and submission target Track 02B | ✅ |
 | Start participant-authored work on or after August 12, 2026 | Repository commits begin August 18, 2026 | ✅ |
 | Team size of 1–4 and every member listed | Complete final team names/contributions in the form | ⏳ |
-| HydraDB performs core work | `src/graph/hydra.ts`, `docs/HYDRA_QUERIES.md`, `.github/workflows/hydra-live.yml` | ✅ code / ⏳ live CI result |
+| HydraDB performs core work | `src/graph/hydra.ts`, `docs/HYDRA_QUERIES.md`, successful `Live HydraDB verification` workflow | ✅ |
 | Functional product or demo | Web UI, HTTP API, MCP server, fixture and deterministic gate | ✅ |
 | Public GitHub repository | Repository is currently private while being prepared | ❌ before submission |
 | Complete source code in repository | Application, tests, Docker setup and Remotion source are present | ✅ |
@@ -37,8 +37,8 @@ When sources differ, the stricter requirement is treated as binding. No deadline
 | Explain how HydraDB is used and what is lost without it | README, architecture and exact queries | ✅ |
 | Credit third-party code, libraries, APIs and datasets | README attribution section | ✅ |
 | Open-source licence | `LICENSE` (MIT) | ✅ |
-| Demo video no longer than three minutes | Remotion composition targets 2:25.5 | ✅ source / ⏳ rendered artifact |
-| Video covers problem, build, working demo and HydraDB use | Scene structure in `video/GenTetherDemo.tsx` | ✅ |
+| Demo video no longer than three minutes | Remotion MP4 is 145.56 seconds (2:25.56) | ✅ |
+| Video covers problem, build, working decisions and HydraDB use | Seven-scene Remotion composition and reviewed render | ✅ |
 | Video viewable without requesting access | Upload rendered MP4 to YouTube as public or unlisted | ❌ |
 | Official submission form completed | Project fields and final links still need submission | ❌ |
 | Submit by deadline | Not yet submitted | ❌ |
@@ -53,21 +53,21 @@ GenTether's core decision depends on this typed graph:
 SourceSpec ──FEEDS──────> GeneratorCommand
 GeneratorCommand ──GENERATES──> GeneratedArtifact
 Consumer ──IMPORTS─────> GeneratedArtifact
-Test ──IMPORTS*1..4────> GeneratedArtifact
+Test ──IMPORTS─────────> Consumer
 ```
 
-The graph answers a question a similarity index cannot prove: **is this the authoritative file the coding agent should edit, and what downstream code and tests are structurally connected to it?**
+HydraDB starts from the generated artifact and performs a native incoming `IMPORTS` traversal with `maxLen: 4`. The graph answers a question a similarity index cannot prove: **is this the authoritative file the coding agent should edit, and what downstream code and tests are structurally connected to it?**
 
 ## Judging rubric evidence
 
 | Criterion | Judge-facing evidence | Remaining gap |
 |---|---|---|
-| Technical execution | Scanner, bounded graph model, deterministic gate, HTTP/MCP surfaces and tests | Obtain green live-HydraDB workflow |
-| HydraDB and graph-native use | Typed relationship ingestion, provenance joins and bounded reverse-import traversal | Show the `HydraDB · live` state in the final recording |
-| Product completeness and usability | Polished web flow with three clear decisions and safe fallback labeling | Optional hosted demo would improve access |
-| Quality of results | Fixture assertions and deterministic BLOCK/REVIEW/ALLOW behavior | Add final video proof from a clean run |
+| Technical execution | Green CI, scanner, deterministic gate, HTTP/MCP surfaces, tests and live HydraDB workflow | None in the repository |
+| HydraDB and graph-native use | Typed ingestion, provenance joins and native incoming `algo.SSpaths` traversal | Keep the HydraDB evidence prominent in the form and video |
+| Product completeness and usability | Polished web flow with three decisions and safe fallback labeling | Optional hosted demo would improve access but is not listed as mandatory |
+| Quality of results | Deterministic fixture assertions plus live `BLOCK`, `REVIEW` and `ALLOW` verification | None in the repository |
 | Originality | Generated-code provenance gate rather than another generic blast-radius map | Explain the "wrong edit target" wedge in the form |
-| Best Use of HydraDB | Source-command-output chain plus directed downstream paths are the product's core evidence | Include exact graph-loss explanation in video/form |
+| Best Use of HydraDB | Source-command-output chain plus directed downstream paths are the product's core evidence | Include the exact graph-loss explanation in the form |
 
 ## Required submission fields
 
@@ -84,14 +84,17 @@ Prepare these before opening the form:
 | Tech stack | Ready in README |
 | Team members and individual contributions | Pending final names/contributions |
 | Public GitHub URL | Pending visibility change |
-| Demo video URL | Pending render and upload |
+| Demo video URL | Render complete; public/unlisted upload pending |
 
-## Final verification commands
+## Verified commands and artifacts
+
+Application and repository gate:
 
 ```bash
 npm install --no-audit --no-fund
 npm test
 npm run video:check
+npm run audit
 npm run demo
 npm run build
 npm start
@@ -103,22 +106,25 @@ Live HydraDB:
 bash scripts/verify-hydra-live.sh
 ```
 
+The live workflow uses the official `ghcr.io/hydra-db/hydradb` image and confirms ingestion, provenance resolution, native incoming path traversal, and all three gate outcomes.
+
 Remotion:
 
 ```bash
+npm run video:narration
 npm run video:studio
 npm run video:render
 ```
 
+The reviewed MP4 is 1280×720, H.264/AAC, 145.56 seconds, and is produced as the `gentether-demo-video` GitHub Actions artifact.
+
 ## Hard submission gate
 
-The project is **not ready to submit yet**. These mandatory items remain:
+The codebase and demo artifact are verified, but the project is **not ready to submit yet**. These mandatory external steps remain:
 
-- [ ] Green live HydraDB verification against the official OSS image
-- [ ] Render and review the Remotion video; confirm duration is at most three minutes
 - [ ] Upload the video to a judge-accessible public or unlisted URL
 - [ ] Make the GitHub repository public
 - [ ] Fill team-member and contribution fields
-- [ ] Open every repo, video and optional demo link from a logged-out browser
+- [ ] Open every repository, video and optional demo link from a logged-out browser
 - [ ] Complete and submit the official form before the deadline
 - [ ] Check Discord once for last-minute updates or an official extension

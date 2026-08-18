@@ -9,7 +9,7 @@ import type { ArtifactNode, RepositoryGraph } from "../src/types.js";
 
 const fixture = path.resolve("fixtures/checkout-app");
 
-test("Hydra adapter writes typed nodes and relationships then consumes bounded traversal rows", async () => {
+test("Hydra adapter writes typed nodes and relationships then consumes native path rows", async () => {
   const snapshot = await scanRepository(fixture);
   const nodes = fixtureNodes(snapshot);
   const originalFetch = globalThis.fetch;
@@ -23,7 +23,8 @@ test("Hydra adapter writes typed nodes and relationships then consumes bounded t
 
     assert.ok(requests.some((request) => request.query.includes("UNWIND $rows AS row MERGE (n {id: row.id})")));
     assert.ok(requests.some((request) => request.query.includes("[r:GENERATES")));
-    assert.ok(requests.some((request) => request.query.includes("[:IMPORTS*1..4]")));
+    assert.ok(requests.some((request) => request.query.includes("CALL algo.SSpaths")));
+    assert.ok(requests.some((request) => request.query.includes("relDirection: 'incoming'")));
     assert.ok(requests.some((request) => request.query.includes("[:FEEDS]")));
     assert.deepEqual(evidence.sourceIds, [nodes.source.id]);
     assert.deepEqual(evidence.commandIds, [nodes.command.id]);
@@ -50,7 +51,7 @@ test("live gate is rebuilt from HydraDB evidence", async () => {
     assert.deepEqual(result.authoritativeSources.map((node) => node.path), ["api/openapi.yaml"]);
     assert.deepEqual(result.commands.map((node) => node.metadata.run), ["npm run generate:api"]);
     assert.deepEqual(result.tests.map((node) => node.path), ["tests/checkout.test.ts"]);
-    assert.ok(result.hydraQueries?.some((query) => query.includes("[:IMPORTS*1..4]")));
+    assert.ok(result.hydraQueries?.some((query) => query.includes("CALL algo.SSpaths")));
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -104,11 +105,12 @@ function mockHydraFetch(
     if (body.query.includes("RETURN cfg.id AS declaration_id")) {
       return jsonRows(["declaration_id"], [[nodes.declaration.id]]);
     }
-    if (body.query.includes("RETURN consumer.id AS consumer_id")) {
-      return jsonRows(
-        ["consumer_id"],
-        [[nodes.orders.id], [nodes.checkout.id], [nodes.test.id]],
-      );
+    if (body.query.includes("CALL algo.SSpaths")) {
+      return jsonPaths([
+        [nodes.generated.id, nodes.orders.id],
+        [nodes.generated.id, nodes.orders.id, nodes.checkout.id],
+        [nodes.generated.id, nodes.orders.id, nodes.checkout.id, nodes.test.id],
+      ]);
     }
     return new Response(JSON.stringify({ columns: [], rows: [] }), { status: 200 });
   }) as typeof fetch;
@@ -119,6 +121,24 @@ function jsonRows(columns: string[], rows: number[][]): Response {
     JSON.stringify({
       columns,
       rows: rows.map((row) => row.map((value) => ({ type: "integer", value }))),
+    }),
+    { status: 200 },
+  );
+}
+
+function jsonPaths(paths: number[][]): Response {
+  return new Response(
+    JSON.stringify({
+      columns: ["path"],
+      rows: paths.map((ids) => [
+        {
+          type: "path",
+          value: {
+            nodes: ids.map((id) => ({ id, labels: ["GenTetherArtifact"], properties: {} })),
+            relationships: [],
+          },
+        },
+      ]),
     }),
     { status: 200 },
   );

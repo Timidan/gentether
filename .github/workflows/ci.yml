@@ -4,15 +4,23 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
-      - run: npm test
-      - run: npm run video:check
-      - run: npm run audit
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Application tests
+        run: timeout 180s npm test
+      - name: Remotion type-check
+        run: timeout 120s npm run video:check
+      - name: Submission audit
+        run: node scripts/audit-submission.mjs

@@ -136,10 +136,10 @@ export class HydraClient {
 
     for (const generatedId of generatedIds) {
       const consumerQuery =
-        "MATCH (consumer:GenTetherArtifact)-[:IMPORTS*1..4]->(g:GenTetherArtifact) WHERE g.id = $target RETURN consumer.id AS consumer_id LIMIT 200";
+        "CALL algo.SSpaths({sourceNode: $target, relTypes: ['IMPORTS'], relDirection: 'incoming', maxLen: 4, pathCount: 200, resultLimit: 200}) YIELD path RETURN path";
       const response = await this.query(consumerQuery, { target: generatedId });
       records.push({ query: consumerQuery, response });
-      consumerIds.push(...numberColumn(responseRows(response), "consumer_id"));
+      consumerIds.push(...pathNodeIds(responseRows(response), generatedId));
     }
 
     return {
@@ -234,6 +234,20 @@ function numberColumn(rows: Record<string, unknown>[], column: string): number[]
   return rows
     .map((row) => row[column])
     .filter((value): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0);
+}
+
+function pathNodeIds(rows: Record<string, unknown>[], sourceId: number): number[] {
+  const ids: number[] = [];
+  for (const row of rows) {
+    const path = row.path;
+    if (!isRecord(path) || !Array.isArray(path.nodes)) continue;
+    for (const node of path.nodes) {
+      if (!isRecord(node)) continue;
+      const id = node.id;
+      if (typeof id === "number" && Number.isSafeInteger(id) && id >= 0 && id !== sourceId) ids.push(id);
+    }
+  }
+  return uniqueNumbers(ids);
 }
 
 function parseHydraBody(text: string): unknown {

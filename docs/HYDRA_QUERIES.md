@@ -56,14 +56,22 @@ The HTTP response's `source_id`, `command_id` and `generated_id` values are deco
 
 ## Find downstream consumers and tests
 
+HydraDB's native single-source path procedure starts at the generated artifact and walks `IMPORTS` edges in the incoming direction:
+
 ```cypher
-MATCH (consumer:GenTetherArtifact)-[:IMPORTS*1..4]->(g:GenTetherArtifact)
-WHERE g.id = $target
-RETURN consumer.id AS consumer_id
-LIMIT 200
+CALL algo.SSpaths({
+  sourceNode: $target,
+  relTypes: ['IMPORTS'],
+  relDirection: 'incoming',
+  maxLen: 4,
+  pathCount: 200,
+  resultLimit: 200
+})
+YIELD path
+RETURN path
 ```
 
-The maximum depth is required and intentionally fixed. Returned `consumer_id` values are mapped back to indexed artifacts and split into consumers and tests. The answer depends on directed reachability, not textual similarity.
+Starting from the fixed generated-artifact ID matches HydraDB's bounded traversal contract. GenTether decodes every returned `QueryPath`, removes the source artifact itself, maps the remaining node IDs back to indexed artifacts, and splits them into consumers and tests. The answer depends on directed multi-hop reachability, not textual similarity.
 
 ## Resolve generator declarations
 
@@ -103,3 +111,7 @@ Authorization: Bearer <token>
 X-Graph-Namespace: default
 Content-Type: application/json
 ```
+
+## Verification evidence
+
+The `Live HydraDB verification` GitHub Actions workflow runs the official `ghcr.io/hydra-db/hydradb` image, ingests the bundled fixture, executes the provenance and native incoming-path queries, and asserts the three gate outcomes: `BLOCK`, `REVIEW`, and `ALLOW`.
