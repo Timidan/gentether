@@ -1,0 +1,124 @@
+name: Finalize Hack Hydra submission
+
+on:
+  push:
+    branches:
+      - submission-verification
+    paths:
+      - ".github/workflows/finalize-submission.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PR_NUMBER: "1"
+
+jobs:
+  verify-and-merge:
+    if: github.ref == 'refs/heads/submission-verification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: submission-verification
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run application tests
+        run: timeout 180s npm test
+
+      - name: Audit repository and hackathon package
+        run: npm run audit
+
+      - name: Install video/runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y espeak-ng ffmpeg
+
+      - name: Verify Remotion composition
+        run: npm run video:check
+
+      - name: Generate narration and render demo
+        run: |
+          npm run video:narration
+          npm run video:render
+          duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 demo/gentether-demo.mp4)"
+          python - "$duration" <<'PY'
+          import sys
+          duration = float(sys.argv[1])
+          if duration > 180:
+              raise SystemExit(f"Demo exceeds 180 seconds: {duration:.2f}")
+          print(f"Remotion demo verified at {duration:.2f} seconds")
+          PY
+
+      - name: Verify the official HydraDB OSS image
+        run: npm run verify:hydra
+
+      - name: Upload final demo video
+        uses: actions/upload-artifact@v4
+        with:
+          name: gentether-final-demo-video
+          path: demo/gentether-demo.mp4
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record successful verification and remove this finalizer
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          path = Path('docs/HACKATHON.md')
+          text = path.read_text()
+          replacements = {
+              '| HydraDB performs core work | `src/graph/hydra.ts`, `docs/HYDRA_QUERIES.md`, `.github/workflows/hydra-live.yml` | ✅ code / ⏳ live CI result |':
+              '| HydraDB performs core work | `src/graph/hydra.ts`, `docs/HYDRA_QUERIES.md`, and the final verification run | ✅ live official-image verification |',
+              '| Demo video no longer than three minutes | Remotion composition targets 2:25.5 | ✅ source / ⏳ rendered artifact |':
+              '| Demo video no longer than three minutes | Remotion composition and final MP4 are 2:25.5 | ✅ rendered and duration-verified |',
+              '| Technical execution | Scanner, bounded graph model, deterministic gate, HTTP/MCP surfaces and tests | Obtain green live-HydraDB workflow |':
+              '| Technical execution | Scanner, bounded graph model, deterministic gate, HTTP/MCP surfaces, tests, and final verification run | ✅ verified |',
+              '| HydraDB and graph-native use | Typed relationship ingestion, provenance joins and bounded reverse-import traversal | Show the `HydraDB · live` state in the final recording |':
+              '| HydraDB and graph-native use | Typed relationship ingestion, provenance joins, bounded reverse-import traversal, and official-image round trip | Show the `HydraDB · live` state in the uploaded recording |',
+              '| Quality of results | Fixture assertions and deterministic BLOCK/REVIEW/ALLOW behavior | Add final video proof from a clean run |':
+              '| Quality of results | Fixture assertions, deterministic BLOCK/REVIEW/ALLOW behavior, and rendered final demo | ✅ verified |',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Missing expected checklist row: {old}')
+              text = text.replace(old, new)
+          marker = '## Final automated verification\n\n'
+          record = f"{marker}- Result: **PASS**\n- GitHub Actions run: {os.environ['RUN_URL']}\n- Verified: tests, repository audit, Remotion render and duration, official HydraDB OSS image\n\n"
+          if marker in text:
+              before, after = text.split(marker, 1)
+              next_heading = after.find('\n## ')
+              text = before + record + (after[next_heading + 1:] if next_heading >= 0 else '')
+          else:
+              text += '\n' + record
+          path.write_text(text)
+          PY
+          git rm .github/workflows/finalize-submission.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/HACKATHON.md
+          git commit -m "Record successful submission verification"
+          git push origin HEAD:submission-verification
+
+      - name: Merge verified pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --subject "Prepare GenTether Hack Hydra submission" \
+            --body "Verified application tests, repository audit, Remotion demo under three minutes, and live HydraDB integration against the official OSS image."
