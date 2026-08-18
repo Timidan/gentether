@@ -22,6 +22,9 @@
     "audit": "node scripts/audit-submission.mjs",
     "video:narration": "bash scripts/generate-narration.sh"
   },
+  "dependencies": {
+    "@phosphor-icons/web": "2.1.2"
+  },
   "devDependencies": {
     "@remotion/cli": "4.0.506",
     "@types/react": "19.2.18",
