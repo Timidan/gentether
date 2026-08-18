@@ -15,6 +15,9 @@ const required = [
   "README.md",
   "LICENSE",
   "package.json",
+  "public/index.html",
+  "public/styles.css",
+  "public/app.js",
   "docs/HACKATHON.md",
   "docs/ARCHITECTURE.md",
   "docs/HYDRA_QUERIES.md",
@@ -60,6 +63,47 @@ check("remotion:package", packageJson.devDependencies?.remotion === "4.0.506", "
 check("remotion:cli", packageJson.devDependencies?.["@remotion/cli"] === "4.0.506", "@remotion/cli must match Remotion");
 check("script:render", typeof packageJson.scripts?.["video:render"] === "string", "video:render must exist");
 check("script:live-hydra", typeof packageJson.scripts?.["verify:hydra"] === "string", "verify:hydra must exist");
+
+const uiHtml = readFileSync(path.join(root, "public/index.html"), "utf8");
+const uiCss = readFileSync(path.join(root, "public/styles.css"), "utf8");
+const uiJs = readFileSync(path.join(root, "public/app.js"), "utf8");
+check(
+  "ui:phosphor-icons",
+  uiHtml.includes("@phosphor-icons/web@2.1.2"),
+  "Phosphor Icons must be pinned to @phosphor-icons/web@2.1.2",
+);
+check(
+  "ui:no-css-gradients",
+  !/(?:linear|radial|conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(uiCss),
+  "the product UI must use flat surfaces rather than CSS gradients",
+);
+check(
+  "ui:no-status-dots",
+  !/(engine-dot|tab-dot|pulsing-dot|pulse-indicator)/i.test(`${uiHtml}\n${uiCss}\n${uiJs}`),
+  "status and tab states must use meaningful icons instead of decorative dots",
+);
+check("ui:no-pill-overuse", !/border-radius:\s*999px/i.test(uiCss), "the UI must not rely on pill-shaped controls");
+check(
+  "ui:cinematic-scroll",
+  uiJs.includes("IntersectionObserver") && uiJs.includes("data-parallax") && uiJs.includes("scroll-progress"),
+  "scroll reveal, parallax, and document progress behavior must be present",
+);
+check(
+  "ui:reduced-motion",
+  uiCss.includes("@media (prefers-reduced-motion: reduce)"),
+  "cinematic motion must include a reduced-motion path",
+);
+try {
+  execFileSync(process.execPath, ["--check", "public/app.js"], {
+    cwd: root,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  checks.push({name: "ui:javascript-syntax", ok: true, detail: "public/app.js parses successfully"});
+} catch (error) {
+  const detail = error instanceof Error ? error.message : String(error);
+  failures.push(`ui:javascript-syntax: ${detail}`);
+  checks.push({name: "ui:javascript-syntax", ok: false, detail});
+}
 
 const videoData = readFileSync(path.join(root, "video/data.ts"), "utf8");
 const fpsMatch = videoData.match(/export const FPS = (\d+)/);
