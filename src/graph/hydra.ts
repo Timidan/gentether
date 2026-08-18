@@ -136,7 +136,7 @@ export class HydraClient {
 
     for (const generatedId of generatedIds) {
       const consumerQuery =
-        "MATCH (consumer:GenTetherArtifact)-[:IMPORTS*1..4]->(g:GenTetherArtifact) WHERE g.id = $target RETURN consumer.id AS consumer_id LIMIT 200";
+        "MATCH (g:GenTetherArtifact {id: $target})<-[:IMPORTS*1..4]-(consumer:GenTetherArtifact) RETURN consumer.id AS consumer_id LIMIT 200";
       const response = await this.query(consumerQuery, { target: generatedId });
       records.push({ query: consumerQuery, response });
       consumerIds.push(...numberColumn(responseRows(response), "consumer_id"));
