@@ -20,7 +20,7 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,42 +40,29 @@ jobs:
           done
           cat /tmp/gentether-server.log
           exit 1
-      - name: Install screenshot browser
-        run: |
-          npm install --no-save playwright@1.54.2
-          npx playwright install --with-deps chromium
-      - name: Capture current interface
+      - name: Capture current interface with preinstalled Chrome
         run: |
           mkdir -p ui-preview
-          node --input-type=module <<'EOF'
-          import { chromium } from 'playwright';
-
-          const browser = await chromium.launch({headless: true});
-          const page = await browser.newPage({viewport: {width: 1440, height: 1000}, deviceScaleFactor: 1});
-          await page.emulateMedia({reducedMotion: 'no-preference'});
-          await page.goto('http://127.0.0.1:8787', {waitUntil: 'networkidle'});
-          await page.waitForTimeout(1800);
-          await page.screenshot({path: 'ui-preview/01-hero.png'});
-
-          await page.locator('#gate').scrollIntoViewIfNeeded();
-          await page.waitForTimeout(1200);
-          await page.screenshot({path: 'ui-preview/02-patch-gate.png'});
-
-          await page.locator('#lineage').scrollIntoViewIfNeeded();
-          await page.waitForTimeout(900);
-          await page.locator('#trace').click();
-          await page.waitForTimeout(1100);
-          await page.screenshot({path: 'ui-preview/03-graph-evidence.png'});
-
-          await page.locator('#agent').scrollIntoViewIfNeeded();
-          await page.waitForTimeout(900);
-          await page.screenshot({path: 'ui-preview/04-agent-tools.png'});
-
-          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
-          await page.waitForTimeout(300);
-          await page.screenshot({path: 'ui-preview/05-full-page.png', fullPage: true});
-          await browser.close();
-          EOF
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$BROWSER"
+          capture() {
+            local url="$1"
+            local output="$2"
+            "$BROWSER" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --hide-scrollbars \
+              --run-all-compositor-stages-before-draw \
+              --virtual-time-budget=5000 \
+              --window-size=1440,1000 \
+              --screenshot="$output" \
+              "$url"
+          }
+          capture http://127.0.0.1:8787 ui-preview/01-hero.png
+          capture http://127.0.0.1:8787/#gate ui-preview/02-patch-gate.png
+          capture http://127.0.0.1:8787/#lineage ui-preview/03-graph-evidence.png
+          capture http://127.0.0.1:8787/#agent ui-preview/04-agent-tools.png
       - uses: actions/upload-artifact@v4
         with:
           name: gentether-current-ui-preview
