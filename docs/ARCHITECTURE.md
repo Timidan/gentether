@@ -105,16 +105,22 @@ The gate never converts missing evidence into `ALLOW`.
 
 ## Downstream impact
 
-For each generated output, GenTether walks incoming `IMPORTS` edges up to four hops. Because import edges point importer → dependency, the in-memory implementation performs a reverse traversal; HydraDB expresses the equivalent as:
+For each generated output, GenTether walks incoming `IMPORTS` edges up to four hops. Because import edges point importer → dependency, HydraDB starts at the fixed generated-artifact ID and uses its native single-source path procedure in the incoming direction:
 
 ```cypher
-MATCH (consumer:GenTetherArtifact)-[:IMPORTS*1..4]->(g:GenTetherArtifact)
-WHERE g.id = $target
-RETURN consumer.id AS consumer_id
-LIMIT 200
+CALL algo.SSpaths({
+  sourceNode: $target,
+  relTypes: ['IMPORTS'],
+  relDirection: 'incoming',
+  maxLen: 4,
+  pathCount: 200,
+  resultLimit: 200
+})
+YIELD path
+RETURN path
 ```
 
-Tests are classified separately from ordinary consumers.
+GenTether decodes the nodes from each returned path, removes the source artifact, and classifies the remaining nodes as ordinary consumers or tests. The live workflow verifies this exact query against HydraDB's official container image.
 
 ## HydraDB lifecycle
 
@@ -126,7 +132,7 @@ At index time:
 4. Execute a count query as a round-trip check.
 5. Set `hydraConnected=true` only after all operations succeed.
 
-At query time, GenTether decodes HydraDB's returned `source_id`, `command_id`, `generated_id`, `declaration_id` and `consumer_id` values and rebuilds the live evidence sets from those rows. An `ALLOW`, `BLOCK` or `REVIEW` result is therefore constrained by what the database actually returns, not merely by whether the endpoint answered. Missing source-command-output evidence degrades to `REVIEW`. Transport failure switches to the deterministic snapshot and records a warning.
+At query time, GenTether decodes HydraDB's returned `source_id`, `command_id`, `generated_id`, `declaration_id`, and native `QueryPath` node values and rebuilds the live evidence sets. An `ALLOW`, `BLOCK`, or `REVIEW` result is therefore constrained by what the database actually returns, not merely by whether the endpoint answered. Missing source-command-output evidence degrades to `REVIEW`. Transport or query failure switches to the deterministic snapshot and records a visible warning.
 
 ## Dependency boundaries
 
