@@ -1,0 +1,34 @@
+{
+  "runs": [
+    {
+      "date": "2026-08-20",
+      "verb": "redesign",
+      "scope": "single-page",
+      "target": "public/index.html",
+      "genre": "modern-minimal technical",
+      "macrostructure": "Workbench",
+      "theme": "custom graphite-lime",
+      "navigation": "N8 terminal command",
+      "footer": "Ft2 inline rule single line",
+      "components": [
+        "F5 annotated product surface",
+        "F3 tabular spec sheet",
+        "C4 sticky bottom action bar"
+      ],
+      "preserved": [
+        "copy intent",
+        "information architecture",
+        "Phosphor Icons",
+        "API and MCP behavior",
+        "HydraDB evidence flow"
+      ],
+      "removed": [
+        "marketing-hero-first structure",
+        "parallax",
+        "scroll event listener",
+        "decorative film grain",
+        "oversized display headline"
+      ]
+    }
+  ]
+}
