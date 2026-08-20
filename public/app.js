@@ -1,8 +1,3 @@
-const graphStyles = document.createElement("link");
-graphStyles.rel = "stylesheet";
-graphStyles.href = "/graph.css";
-document.head.append(graphStyles);
-
 const examples = {
   blocked: ["src/generated/api-client.ts"],
   review: ["api/openapi.yaml"],
