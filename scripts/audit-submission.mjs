@@ -85,7 +85,14 @@ check("hallmark:stamp", uiCss.includes("Hallmark · genre:") && uiCss.includes("
 check("hallmark:critique", /Hallmark · pre-emit critique: P[3-5] H[3-5] E[3-5] S[3-5] R[3-5] V[3-5]/.test(uiCss), "all six critique scores must be at least 3");
 check("hallmark:tokens", uiTokens.includes("oklch(") && uiTokens.includes("--font-display") && uiTokens.includes("--space-4xl"), "tokens.css must contain OKLCH, typography, and spacing tokens");
 check("hallmark:locked-colors", !/(#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|oklch\()/i.test(uiCss), "styles.css must reference named colour tokens instead of literal colours");
-check("hallmark:locked-fonts", !/font-family:\s*(?!var\()/i.test(uiCss), "styles.css must reference named font tokens only");
+const hardCodedFontFamilies = [...uiCss.matchAll(/font-family:\s*([^;]+);/gi)]
+  .map((match) => match[1]?.trim() ?? "")
+  .filter((value) => value.length > 0 && !value.startsWith("var("));
+check(
+  "hallmark:locked-fonts",
+  hardCodedFontFamilies.length === 0,
+  `hard-coded font declarations: ${hardCodedFontFamilies.join(", ") || "none"}`,
+);
 check("hallmark:no-italic-heads", !/h[1-6][^{]*\{[^}]*font-style:\s*italic/is.test(uiCss), "display headings must remain roman");
 check("hallmark:root-clip", /html,\s*\nbody\s*\{[^}]*overflow-x:\s*clip/is.test(uiCss), "html and body must use overflow-x: clip");
 check("hallmark:no-root-hidden", !/overflow-x:\s*hidden/i.test(uiCss), "overflow-x: hidden is forbidden because it breaks sticky descendants");
