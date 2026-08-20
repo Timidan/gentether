@@ -14,6 +14,12 @@ import type {
 } from "./types.js";
 import { normalizeRepoPath, severity, uniqueBy } from "./utils.js";
 
+export interface HydraStartupOptions {
+  attempts?: number;
+  delayMs?: number;
+  requireHydra?: boolean;
+}
+
 export class GenTetherService {
   private snapshotValue: RepositoryGraph;
   private memoryGraphValue: MemoryGraph;
@@ -30,13 +36,18 @@ export class GenTetherService {
 
   static async create(
     rootInput: string,
-    options: { scan?: ScanOptions; hydra?: HydraClient | undefined } = {},
+    options: { scan?: ScanOptions; hydra?: HydraClient | undefined; hydraStartup?: HydraStartupOptions } = {},
   ): Promise<GenTetherService> {
     const root = path.resolve(rootInput);
     const snapshot = await scanRepository(root, options.scan);
     const hydra = options.hydra ?? HydraClient.fromEnvironment();
     const service = new GenTetherService(snapshot, hydra);
-    await service.syncHydra();
+    await service.syncHydra(options.hydraStartup?.attempts, options.hydraStartup?.delayMs);
+    if (options.hydraStartup?.requireHydra && !service.hydraConnectedValue) {
+      const attempts = Math.max(1, Math.trunc(options.hydraStartup.attempts ?? 1));
+      const detail = service.hydraError ?? "HydraDB is not configured";
+      throw new Error(`HydraDB is required but synchronization failed after ${attempts} attempts: ${detail}`);
+    }
     return service;
   }
 
@@ -275,17 +286,29 @@ export class GenTetherService {
       .filter((node): node is ArtifactNode => node !== undefined);
   }
 
-  private async syncHydra(): Promise<void> {
+  private async syncHydra(attemptsInput = 1, delayMsInput = 0): Promise<void> {
     this.hydraConnectedValue = false;
     this.hydraError = undefined;
     if (!this.hydra) return;
-    try {
-      await this.hydra.replaceGraph(this.snapshotValue);
-      this.hydraConnectedValue = true;
-    } catch (error) {
-      this.hydraError = errorMessage(error);
+
+    const attempts = Math.max(1, Math.trunc(attemptsInput));
+    const delayMs = Math.max(0, Math.trunc(delayMsInput));
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        await this.hydra.replaceGraph(this.snapshotValue);
+        this.hydraConnectedValue = true;
+        this.hydraError = undefined;
+        return;
+      } catch (error) {
+        this.hydraError = errorMessage(error);
+        if (attempt < attempts && delayMs > 0) await wait(delayMs);
+      }
     }
   }
+}
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 function splitDownstream(nodes: ArtifactNode[], consumers: ArtifactNode[], tests: ArtifactNode[]): void {

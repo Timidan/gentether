@@ -14,13 +14,33 @@ const repositoryRoot = path.resolve(process.env.GENTETHER_REPO ?? path.join(proj
 const publicDirectory = path.join(projectRoot, "public");
 const phosphorDirectory = path.join(projectRoot, "node_modules", "@phosphor-icons", "web");
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
-const service = await GenTetherService.create(repositoryRoot);
+const host = process.env.HOST?.trim() || "0.0.0.0";
+const requireHydra = booleanEnvironment("REQUIRE_HYDRA", false);
+const hydraSyncAttempts = integerEnvironment("HYDRA_SYNC_ATTEMPTS", 1, 1);
+const hydraSyncDelayMs = integerEnvironment("HYDRA_SYNC_DELAY_MS", 1_000, 0);
+const service = await GenTetherService.create(repositoryRoot, {
+  hydraStartup: {
+    attempts: hydraSyncAttempts,
+    delayMs: hydraSyncDelayMs,
+    requireHydra,
+  },
+});
 
 const server = createServer(async (request, response) => {
   try {
     const method = request.method ?? "GET";
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
+    if (method === "GET" && url.pathname === "/healthz") return json(response, 200, { status: "ok" });
+    if (method === "GET" && url.pathname === "/readyz") {
+      const status = service.status();
+      const ready = !requireHydra || status.hydraConnected;
+      return json(response, ready ? 200 : 503, {
+        status: ready ? "ready" : "not_ready",
+        engine: status.engine,
+        hydraConnected: status.hydraConnected,
+      });
+    }
     if (method === "GET" && url.pathname === "/api/status") return json(response, 200, service.status());
     if (method === "GET" && url.pathname === "/api/generated") {
       return json(response, 200, { files: service.generatedFiles() });
@@ -62,11 +82,29 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
+server.listen(port, host, () => {
   const status = service.status();
-  console.log(`GenTether listening on http://127.0.0.1:${port}`);
+  console.log(`GenTether listening on ${host}:${port}`);
   console.log(`Indexed ${status.root} with ${status.engine}.`);
 });
+
+function booleanEnvironment(name: string, fallback: boolean): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (!raw) return fallback;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error(`${name} must be true or false.`);
+}
+
+function integerEnvironment(name: string, fallback: number, minimum: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < minimum) {
+    throw new Error(`${name} must be an integer greater than or equal to ${minimum}.`);
+  }
+  return value;
+}
 
 async function readJsonBody(request: any): Promise<Record<string, unknown>> {
   const chunks: string[] = [];

@@ -28,6 +28,11 @@ declare module "node:http" {
 
 declare module "node:test" {
   export default function test(name: string, implementation: () => unknown | Promise<unknown>): void;
+  export default function test(
+    name: string,
+    options: Record<string, unknown>,
+    implementation: () => unknown | Promise<unknown>,
+  ): void;
   export function describe(name: string, implementation: () => void): void;
   export function it(name: string, implementation: () => unknown | Promise<unknown>): void;
 }
@@ -38,12 +43,18 @@ declare module "node:assert/strict" {
 }
 
 declare module "node:child_process" {
+  export function spawn(command: string, arguments_: string[], options?: Record<string, unknown>): any;
   export function spawnSync(command: string, arguments_: string[], options?: Record<string, unknown>): any;
+}
+
+declare module "node:net" {
+  export function createServer(): any;
 }
 
 declare const process: {
   env: NodeJS.ProcessEnv;
   argv: string[];
+  execPath: string;
   cwd(): string;
   exitCode?: number;
   stdin: any;
