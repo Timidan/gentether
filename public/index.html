@@ -7,276 +7,256 @@
       name="description"
       content="GenTether is a graph-native provenance gate that keeps coding agents from editing generated artifacts directly."
     />
-    <title>GenTether · Edit the source, never the artifact</title>
+    <title>GenTether · Check the patch before the agent writes</title>
     <script>
       document.documentElement.classList.remove("no-js");
       document.documentElement.classList.add("js");
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@350;450;600&family=JetBrains+Mono:wght@400;600;800&display=swap"
+    />
     <link rel="stylesheet" href="/vendor/phosphor/src/regular/style.css" />
+    <link rel="stylesheet" href="/tokens.css" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="scroll-progress" aria-hidden="true"><span id="scroll-progress"></span></div>
-    <div class="film-grain" aria-hidden="true"></div>
+    <a class="skip-link" href="#gate">Skip to patch gate</a>
 
-    <header class="topbar" id="topbar">
-      <a class="brand" href="#top" aria-label="GenTether home">
-        <span class="brand-symbol" aria-hidden="true"><i class="ph ph-git-branch"></i></span>
-        <span class="brand-word">GenTether</span>
+    <header class="command-nav" id="topbar">
+      <a class="command-brand" href="#top" aria-label="GenTether home">
+        <i class="ph ph-git-branch" aria-hidden="true"></i>
+        <span>&gt; gentether</span>
       </a>
 
-      <nav class="topnav" aria-label="Primary navigation">
-        <a href="#gate">Patch gate</a>
-        <a href="#lineage">Graph evidence</a>
-        <a href="#agent">Agent tools</a>
+      <nav class="command-links" aria-label="Primary navigation">
+        <a href="#gate">--gate</a>
+        <a href="#lineage">--trace</a>
+        <a href="#agent">--agents</a>
       </nav>
 
-      <div class="engine-status" id="engine-pill" aria-live="polite">
+      <div class="engine-readout" id="engine-pill" aria-live="polite">
         <i class="ph ph-database" aria-hidden="true"></i>
         <span id="engine-label">Indexing graph…</span>
       </div>
     </header>
 
     <main id="top">
-      <section class="hero shell" aria-labelledby="hero-title">
-        <div class="hero-meta" data-reveal>
-          <span>Hack Hydra · Track 02B</span>
-          <span>Pre-write provenance control</span>
+      <section class="workbench-intro shell" aria-labelledby="page-title">
+        <div class="intro-copy reveal-on-load" style="--i: 0">
+          <p class="kicker">Hack Hydra · Track 02B · Code graphs for IDE assistants</p>
+          <h1 id="page-title">Check the patch before the agent writes.</h1>
+          <p class="lede">
+            Paste the files a coding agent plans to change. GenTether resolves the source,
+            generator, output, consumers, and tests—then returns BLOCK, REVIEW, or ALLOW.
+          </p>
         </div>
 
-        <div class="hero-layout">
-          <div class="hero-copy-block">
-            <h1 class="hero-title" id="hero-title">
-              <span class="title-mask"><span>Edit the source.</span></span>
-              <span class="title-mask title-accent"><span>Never the artifact.</span></span>
-            </h1>
+        <dl class="metric-ledger reveal-on-load" id="metrics" style="--i: 1" aria-live="polite">
+          <div>
+            <dt>Files indexed</dt>
+            <dd>—</dd>
+          </div>
+          <div>
+            <dt>Generated artifacts</dt>
+            <dd>—</dd>
+          </div>
+          <div>
+            <dt>Typed relationships</dt>
+            <dd>—</dd>
+          </div>
+        </dl>
+      </section>
 
-            <p class="hero-copy" data-reveal>
-              GenTether traces generated code back to the schema and command that own it, then
-              follows the dependency graph to every consumer and test before a coding agent writes.
-            </p>
+      <section class="gate-workbench shell reveal-on-load" id="gate" style="--i: 2" aria-labelledby="gate-title">
+        <header class="workbench-caption">
+          <div>
+            <p class="caption-index">Workbench / 01</p>
+            <h2 id="gate-title">Run the gate</h2>
+          </div>
+          <p>Choose a known failure mode or paste one path per line.</p>
+          <button class="icon-control" id="reindex" type="button" title="Re-index repository" aria-label="Re-index repository">
+            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+          </button>
+        </header>
 
-            <div class="hero-actions" data-reveal>
-              <a class="button button-primary" href="#gate">
-                <span>Run the patch gate</span>
-                <i class="ph ph-arrow-down-right" aria-hidden="true"></i>
-              </a>
-              <button class="button button-secondary" id="load-lineage" type="button">
-                <i class="ph ph-path" aria-hidden="true"></i>
-                <span>Trace the graph</span>
+        <div class="workbench-frame">
+          <aside class="scenario-rail" aria-label="Patch examples">
+            <p class="rail-label">Scenarios</p>
+            <div class="scenario-tabs" role="tablist" aria-label="Patch examples">
+              <button class="scenario-tab active" data-example="blocked" type="button" role="tab" aria-selected="true">
+                <span class="scenario-code">01</span>
+                <i class="ph ph-prohibit" aria-hidden="true"></i>
+                <span>Generated only</span>
+              </button>
+              <button class="scenario-tab" data-example="review" type="button" role="tab" aria-selected="false">
+                <span class="scenario-code">02</span>
+                <i class="ph ph-warning" aria-hidden="true"></i>
+                <span>Source only</span>
+              </button>
+              <button class="scenario-tab" data-example="allowed" type="button" role="tab" aria-selected="false">
+                <span class="scenario-code">03</span>
+                <i class="ph ph-check-circle" aria-hidden="true"></i>
+                <span>Coordinated</span>
               </button>
             </div>
-          </div>
-
-          <aside class="hero-object" data-parallax="-0.1" aria-label="Generated-code chain of custody">
-            <div class="object-header">
-              <span>Chain of custody</span>
-              <span>01—04</span>
-            </div>
-            <ol class="object-chain">
-              <li>
-                <i class="ph ph-file-text" aria-hidden="true"></i>
-                <div><small>Source</small><strong>api/openapi.yaml</strong></div>
-              </li>
-              <li>
-                <i class="ph ph-terminal-window" aria-hidden="true"></i>
-                <div><small>Generator</small><strong>npm run generate:api</strong></div>
-              </li>
-              <li>
-                <i class="ph ph-file-code" aria-hidden="true"></i>
-                <div><small>Artifact</small><strong>src/generated/api-client.ts</strong></div>
-              </li>
-              <li>
-                <i class="ph ph-test-tube" aria-hidden="true"></i>
-                <div><small>Verification</small><strong>tests/checkout.test.ts</strong></div>
-              </li>
-            </ol>
-            <div class="object-footer">
-              <i class="ph ph-shield-check" aria-hidden="true"></i>
-              <span>Graph evidence before code changes</span>
-            </div>
           </aside>
-        </div>
 
-        <div class="metric-row" id="metrics" data-reveal aria-live="polite">
-          <div><strong>—</strong><span>files indexed</span></div>
-          <div><strong>—</strong><span>generated artifacts</span></div>
-          <div><strong>—</strong><span>typed relationships</span></div>
-        </div>
-
-        <a class="scroll-cue" href="#problem" aria-label="Continue to the problem">
-          <span>Scroll to inspect</span>
-          <i class="ph ph-arrow-down" aria-hidden="true"></i>
-        </a>
-      </section>
-
-      <section class="story shell scene" id="problem">
-        <div class="scene-heading" data-reveal>
-          <span class="scene-number">02</span>
-          <div>
-            <span class="section-label">The failure mode</span>
-            <h2>A plausible edit can still be the wrong edit.</h2>
-          </div>
-        </div>
-
-        <div class="story-sequence">
-          <article class="story-frame" data-reveal>
-            <span class="frame-number">01</span>
-            <i class="ph ph-file-code" aria-hidden="true"></i>
-            <div>
-              <h3>The artifact looks ordinary</h3>
-              <p>A generated TypeScript client is readable, editable, and often indistinguishable from hand-written code.</p>
-            </div>
-          </article>
-          <article class="story-frame" data-reveal>
-            <span class="frame-number">02</span>
-            <i class="ph ph-code-block" aria-hidden="true"></i>
-            <div>
-              <h3>The agent patches what it sees</h3>
-              <p>A narrow local test can pass even though the authoritative schema and regeneration command were never touched.</p>
-            </div>
-          </article>
-          <article class="story-frame" data-reveal>
-            <span class="frame-number">03</span>
-            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
-            <div>
-              <h3>The next codegen run erases the fix</h3>
-              <p>GenTether moves the decision earlier: before the write, while the agent can still choose the correct source.</p>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="workspace shell scene" id="gate">
-        <div class="workspace-head" data-reveal>
-          <div class="scene-heading compact">
-            <span class="scene-number">03</span>
-            <div>
-              <span class="section-label">Live patch gate</span>
-              <h2>What is the agent about to change?</h2>
-            </div>
-          </div>
-          <button class="icon-button" id="reindex" type="button" title="Re-index repository" aria-label="Re-index repository">
-            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div class="demo-tabs" role="tablist" aria-label="Patch examples" data-reveal>
-          <button class="demo-tab active" data-example="blocked" type="button" role="tab" aria-selected="true">
-            <i class="ph ph-prohibit" aria-hidden="true"></i>
-            <span>Generated only</span>
-          </button>
-          <button class="demo-tab" data-example="review" type="button" role="tab" aria-selected="false">
-            <i class="ph ph-warning" aria-hidden="true"></i>
-            <span>Source only</span>
-          </button>
-          <button class="demo-tab" data-example="allowed" type="button" role="tab" aria-selected="false">
-            <i class="ph ph-check-circle" aria-hidden="true"></i>
-            <span>Source + output</span>
-          </button>
-        </div>
-
-        <div class="gate-grid" data-reveal>
-          <section class="editor-panel panel" aria-labelledby="changed-paths-title">
-            <header class="panel-title">
+          <section class="input-deck" aria-labelledby="changed-paths-title">
+            <header class="deck-header">
               <span id="changed-paths-title"><i class="ph ph-git-diff" aria-hidden="true"></i>Changed paths</span>
               <code>one path per line</code>
             </header>
             <textarea id="changed-files" spellcheck="false" aria-label="Changed file paths">src/generated/api-client.ts</textarea>
-            <button class="button button-primary full" id="analyze" type="button">
+            <button class="action-link" id="analyze" type="button">
               <span>Analyze proposed patch</span>
               <i class="ph ph-arrow-right" aria-hidden="true"></i>
             </button>
           </section>
 
-          <section class="decision-panel panel" id="decision-card" aria-live="polite">
-            <header class="decision-topline">
-              <span class="decision-kicker">Gate decision</span>
-              <span class="decision-engine" id="decision-engine">—</span>
+          <section class="decision-deck" id="decision-card" aria-live="polite">
+            <header class="deck-header">
+              <span><i class="ph ph-shield-check" aria-hidden="true"></i>Gate decision</span>
+              <code id="decision-engine">—</code>
             </header>
             <div class="decision-lockup">
               <span class="decision-icon" aria-hidden="true"><i class="ph ph-git-diff" id="decision-icon"></i></span>
               <div class="decision-word neutral" id="decision-word">READY</div>
             </div>
-            <p class="decision-summary" id="decision-summary">Choose an example or analyze the changed paths.</p>
+            <p class="decision-summary" id="decision-summary">Choose a scenario or analyze the changed paths.</p>
             <div class="reason-list" id="reason-list"></div>
           </section>
         </div>
+
+        <ol class="annotation-strip" aria-label="How to use the patch gate">
+          <li><span>01</span><p>Describe the patch with file paths, not prose.</p></li>
+          <li><span>02</span><p>Let the graph resolve source, command, output, and impact.</p></li>
+          <li><span>03</span><p>Obey BLOCK, repair REVIEW, and verify ALLOW.</p></li>
+        </ol>
       </section>
 
-      <section class="lineage shell scene" id="lineage">
-        <div class="lineage-copy" data-reveal>
-          <div class="scene-heading compact">
-            <span class="scene-number">04</span>
-            <div>
-              <span class="section-label">Graph evidence</span>
-              <h2>One target. The full chain of custody.</h2>
-            </div>
+      <section class="lineage-workbench shell reveal-on-scroll" id="lineage" aria-labelledby="lineage-title">
+        <header class="workbench-caption">
+          <div>
+            <p class="caption-index">Workbench / 02</p>
+            <h2 id="lineage-title">Trace the evidence</h2>
           </div>
-          <p>
-            Similar text cannot prove where generated code came from. GenTether follows typed
-            <code>FEEDS</code>, <code>GENERATES</code>, and <code>IMPORTS</code> relationships instead.
-          </p>
-          <label for="lineage-file">Trace an indexed artifact</label>
-          <div class="trace-control">
-            <div class="select-wrap">
-              <i class="ph ph-file-code" aria-hidden="true"></i>
-              <select id="lineage-file"></select>
-              <i class="ph ph-caret-down" aria-hidden="true"></i>
-            </div>
-            <button class="button button-secondary" id="trace" type="button">
-              <i class="ph ph-path" aria-hidden="true"></i>
-              <span>Trace lineage</span>
-            </button>
+          <p>Start from a generated artifact and inspect the exact chain of custody.</p>
+        </header>
+
+        <div class="trace-toolbar">
+          <label for="lineage-file">Indexed artifact</label>
+          <div class="select-control">
+            <i class="ph ph-file-code" aria-hidden="true"></i>
+            <select id="lineage-file"></select>
+            <i class="ph ph-caret-down" aria-hidden="true"></i>
           </div>
+          <button class="action-link compact" id="trace" type="button">
+            <span>Trace lineage</span>
+            <i class="ph ph-path" aria-hidden="true"></i>
+          </button>
         </div>
 
-        <div class="graph-panel panel" id="graph-panel" data-reveal>
+        <div class="graph-panel" id="graph-panel">
           <div class="graph-empty">
             <i class="ph ph-flow-arrow" aria-hidden="true"></i>
-            <p>Run the trace to reveal the source, generator, artifact, downstream consumers, and tests.</p>
+            <p>Run the trace to reveal the source, generator, artifact, consumers, and tests.</p>
           </div>
         </div>
       </section>
 
-      <section class="agent-section shell scene" id="agent">
-        <div class="scene-heading" data-reveal>
-          <span class="scene-number">05</span>
+      <section class="protocol-sheet shell reveal-on-scroll" aria-labelledby="protocol-title">
+        <header class="workbench-caption">
           <div>
-            <span class="section-label">Agent-native surface</span>
-            <h2>Put the gate inside the coding loop.</h2>
+            <p class="caption-index">Workbench / 03</p>
+            <h2 id="protocol-title">What HydraDB proves</h2>
           </div>
-        </div>
+          <p>Typed paths replace “this file looks related” with inspectable evidence.</p>
+        </header>
 
-        <div class="agent-grid">
-          <p data-reveal>
-            The dashboard makes the reasoning visible. MCP puts the same decision directly in front of
-            a coding agent before it writes, while the HTTP API supports CI and IDE integrations.
-          </p>
-          <div class="tool-list" data-reveal>
-            <article class="tool-row">
-              <i class="ph ph-file-search" aria-hidden="true"></i>
-              <div><code>gentether_resolve_edit_target</code><span>Find the authoritative edit surface</span></div>
-              <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
-            </article>
-            <article class="tool-row">
-              <i class="ph ph-shield-check" aria-hidden="true"></i>
-              <div><code>gentether_check_patch</code><span>Block, review, or allow before writing</span></div>
-              <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
-            </article>
-            <article class="tool-row">
-              <i class="ph ph-terminal-window" aria-hidden="true"></i>
-              <div><code>gentether_plan_regeneration</code><span>Return the commands, outputs, and tests</span></div>
-              <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
-            </article>
+        <div class="spec-table" role="table" aria-label="HydraDB evidence model">
+          <div class="spec-row spec-head" role="row">
+            <span role="columnheader">Graph fact</span>
+            <span role="columnheader">Example</span>
+            <span role="columnheader">Why the gate needs it</span>
+          </div>
+          <div class="spec-row" role="row">
+            <span role="cell">FEEDS</span>
+            <code role="cell">api/openapi.yaml → generate:api</code>
+            <span role="cell">Names the authoritative source.</span>
+          </div>
+          <div class="spec-row" role="row">
+            <span role="cell">GENERATES</span>
+            <code role="cell">generate:api → api-client.ts</code>
+            <span role="cell">Proves the visible file is derived.</span>
+          </div>
+          <div class="spec-row" role="row">
+            <span role="cell">IMPORTS</span>
+            <code role="cell">checkout.ts → api-client.ts</code>
+            <span role="cell">Finds downstream consumers and tests.</span>
+          </div>
+          <div class="spec-row" role="row">
+            <span role="cell">ABSTAIN</span>
+            <code role="cell">missing path → REVIEW</code>
+            <span role="cell">The gate does not invent certainty.</span>
           </div>
         </div>
       </section>
+
+      <section class="agent-workbench shell reveal-on-scroll" id="agent" aria-labelledby="agent-title">
+        <header class="workbench-caption">
+          <div>
+            <p class="caption-index">Workbench / 04</p>
+            <h2 id="agent-title">Put it in the coding loop</h2>
+          </div>
+          <p>The browser explains the decision. MCP lets an agent ask before it writes.</p>
+        </header>
+
+        <div class="tool-specs">
+          <article class="tool-spec">
+            <i class="ph ph-file-search" aria-hidden="true"></i>
+            <div>
+              <code>gentether_resolve_edit_target</code>
+              <p>Find the authoritative source, generator, outputs, consumers, and tests.</p>
+            </div>
+            <span>read</span>
+          </article>
+          <article class="tool-spec">
+            <i class="ph ph-shield-check" aria-hidden="true"></i>
+            <div>
+              <code>gentether_check_patch</code>
+              <p>Return BLOCK, REVIEW, or ALLOW before any file is changed.</p>
+            </div>
+            <span>gate</span>
+          </article>
+          <article class="tool-spec">
+            <i class="ph ph-terminal-window" aria-hidden="true"></i>
+            <div>
+              <code>gentether_plan_regeneration</code>
+              <p>Return the generation command, expected outputs, and verification tests.</p>
+            </div>
+            <span>plan</span>
+          </article>
+        </div>
+      </section>
+
+      <aside class="action-dock" aria-label="Next action">
+        <div>
+          <span>Demo fixture ready</span>
+          <small>Trace the generated client from source to test.</small>
+        </div>
+        <button class="dock-action" id="load-lineage" type="button">
+          <span>Trace lineage</span>
+          <i class="ph ph-arrow-down-right" aria-hidden="true"></i>
+        </button>
+      </aside>
     </main>
 
-    <footer class="shell">
+    <footer class="site-footer shell">
       <span>GenTether · Hack Hydra 2026</span>
-      <span>Graph truth over plausible guesses.</span>
+      <span>MIT · HydraDB OSS · Track 02B</span>
     </footer>
 
     <script type="module" src="/app.js"></script>
