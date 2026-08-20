@@ -1,3 +1,8 @@
+const graphStyles = document.createElement("link");
+graphStyles.rel = "stylesheet";
+graphStyles.href = "/graph.css";
+document.head.append(graphStyles);
+
 const examples = {
   blocked: ["src/generated/api-client.ts"],
   review: ["api/openapi.yaml"],
@@ -53,6 +58,7 @@ async function boot() {
     renderStatus(status);
     renderGeneratedFiles(generated.files);
     await analyze();
+    if (window.location.hash === "#lineage") await trace();
   } catch (error) {
     elements.engineLabel.textContent = `Unavailable · ${error.message}`;
     renderError(error);
@@ -277,6 +283,9 @@ elements.reindex.addEventListener("click", async () => {
   } finally {
     elements.reindex.classList.remove("is-spinning");
   }
+});
+window.addEventListener("hashchange", () => {
+  if (window.location.hash === "#lineage") void trace();
 });
 
 void boot();
