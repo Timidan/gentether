@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - hallmark-workbench-redesign
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "public/**"
+      - "scripts/audit-submission.mjs"
+      - ".hallmark/**"
+      - ".github/workflows/hallmark-ui-review.yml"
   workflow_dispatch:
 
 permissions:
