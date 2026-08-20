@@ -17,6 +17,11 @@
   grid-column: auto;
 }
 
+.action-dock {
+  position: static;
+  margin-bottom: var(--space-2xl);
+}
+
 @media (max-width: 64rem) {
   .graph-flow {
     grid-template-columns: minmax(0, 1fr);
