@@ -1,0 +1,69 @@
+name: Hallmark UI review
+
+on:
+  push:
+    branches:
+      - hallmark-workbench-redesign
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run audit
+      - name: Start GenTether
+        run: |
+          GENTETHER_REPO=./fixtures/checkout-app npm start > /tmp/gentether-server.log 2>&1 &
+          echo $! > /tmp/gentether-server.pid
+          for attempt in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/api/status >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/gentether-server.log
+          exit 1
+      - name: Capture Hallmark desktop and mobile review frames
+        run: |
+          mkdir -p hallmark-review
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$BROWSER"
+          capture() {
+            local width="$1"
+            local height="$2"
+            local url="$3"
+            local output="$4"
+            "$BROWSER" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --hide-scrollbars \
+              --run-all-compositor-stages-before-draw \
+              --virtual-time-budget=6500 \
+              --window-size="$width,$height" \
+              --screenshot="$output" \
+              "$url"
+          }
+          capture 1440 1000 http://127.0.0.1:8787 hallmark-review/01-desktop-top.png
+          capture 1440 1000 http://127.0.0.1:8787/#gate hallmark-review/02-desktop-gate.png
+          capture 1440 1000 http://127.0.0.1:8787/#lineage hallmark-review/03-desktop-lineage.png
+          capture 768 1024 http://127.0.0.1:8787/#gate hallmark-review/04-tablet-768.png
+          capture 414 896 http://127.0.0.1:8787/#gate hallmark-review/05-mobile-414.png
+          capture 375 812 http://127.0.0.1:8787/#gate hallmark-review/06-mobile-375.png
+          capture 320 700 http://127.0.0.1:8787/#gate hallmark-review/07-mobile-320.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hallmark-workbench-ui-review
+          path: hallmark-review/*.png
+          if-no-files-found: error
+          retention-days: 7
