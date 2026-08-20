@@ -1,0 +1,61 @@
+name: gentether
+
+services:
+  hydradb:
+    image: ghcr.io/hydra-db/hydradb:latest
+    restart: unless-stopped
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    expose:
+      - "7687"
+      - "8443"
+      - "9090"
+    volumes:
+      - ./.hydradb:/data
+    environment:
+      CLOUD_PROVIDER: local
+      LOCAL_PATH: /data/store
+      GRAPH_NAMESPACE: default
+      GRAPH_ID: default
+      GRAPH_CELL_ID: cell-0
+      GRAPH_CELLS: cell-0
+      GRAPH_NODE_ID: node-0
+      GRAPH_BOLT_NODE_ADDRESSES: node-0=127.0.0.1:7687
+      GRAPH_ADVERTISED_BOLT_ADDR: 127.0.0.1:7687
+      GRAPH_DATA_CACHE_DIR: /data/cache
+      GRAPH_AUTH_TOKEN_FILE: /data/auth-token
+      GRAPH_ALLOW_PLAINTEXT: "true"
+      RUST_MIN_STACK: "33554432"
+    networks:
+      - private
+
+  gentether:
+    image: gentether-app:deployment
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - hydradb
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      GENTETHER_REPO: /app/fixtures/checkout-app
+      REQUIRE_HYDRA: "true"
+      HYDRA_SYNC_ATTEMPTS: "90"
+      HYDRA_SYNC_DELAY_MS: "1000"
+      HYDRA_URL: http://hydradb:8443
+      HYDRA_TOKEN: "${HYDRA_TOKEN:?HYDRA_TOKEN is required}"
+      HYDRA_NAMESPACE: default
+      HYDRA_GRAPH: default
+      HYDRA_CELL_ID: cell-0
+    networks:
+      private:
+      public_proxy:
+        aliases:
+          - gentether-app
+
+networks:
+  private:
+    internal: true
+  public_proxy:
+    external: true

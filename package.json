@@ -19,6 +19,7 @@
     "video:check": "tsc -p video/tsconfig.json",
     "video:render": "remotion render video/index.ts GenTetherDemo demo/gentether-demo.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --concurrency=2",
     "verify:hydra": "bash scripts/verify-hydra-live.sh",
+    "deploy:check": "node scripts/check-deployment.mjs",
     "audit": "node scripts/audit-submission.mjs",
     "video:narration": "bash scripts/generate-narration.sh"
   },

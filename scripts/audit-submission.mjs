@@ -32,6 +32,9 @@ const required = [
   ".github/workflows/hydra-live.yml",
   ".github/workflows/render-demo.yml",
   "scripts/verify-hydra-live.sh",
+  "scripts/check-deployment.mjs",
+  "compose.vps.yml",
+  ".env.deploy.example",
 ];
 for (const file of required) check(`required:${file}`, existsSync(path.join(root, file)), `${file} must exist`);
 
@@ -78,6 +81,30 @@ const uiGraphCss = readFileSync(path.join(root, "public/graph.css"), "utf8");
 const uiStyleSheets = `${uiCss}\n${uiGraphCss}`;
 const uiJs = readFileSync(path.join(root, "public/app.js"), "utf8");
 const serverSource = readFileSync(path.join(root, "src/server.ts"), "utf8");
+const vpsCompose = readFileSync(path.join(root, "compose.vps.yml"), "utf8");
+const gitignore = readFileSync(path.join(root, ".gitignore"), "utf8");
+const hydraServiceBlock = vpsCompose.match(/  hydradb:\n([\s\S]*?)\n  gentether:/)?.[1] ?? "";
+
+check(
+  "deploy:env-ignore",
+  gitignore.includes(".env.*") && gitignore.includes("!.env.example") && gitignore.includes("!.env.deploy.example"),
+  "local deployment environments must be ignored while committed examples remain allowed",
+);
+check(
+  "deploy:private-hydra",
+  hydraServiceBlock.includes("expose:") && !/^\s+ports:/m.test(hydraServiceBlock),
+  "HydraDB may be exposed to the Docker network but must not publish host ports",
+);
+check(
+  "deploy:fail-closed",
+  vpsCompose.includes('REQUIRE_HYDRA: "true"') && vpsCompose.includes("HYDRA_SYNC_ATTEMPTS"),
+  "the VPS application must require HydraDB and use bounded startup retries",
+);
+check(
+  "deploy:configurable-bind",
+  serverSource.includes('process.env.HOST') && serverSource.includes('|| "0.0.0.0"'),
+  "the HTTP bind host must be configurable and container-reachable by default",
+);
 
 check(
   "ui:phosphor-icons",

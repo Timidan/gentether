@@ -122,6 +122,25 @@ Run the dedicated live verification with:
 bash scripts/verify-hydra-live.sh
 ```
 
+### VPS deployment
+
+`compose.vps.yml` keeps HydraDB on a private Docker network and publishes only GenTether on the VPS loopback interface for a shared reverse proxy.
+
+```bash
+cp .env.deploy.example .env.deploy
+chmod 600 .env.deploy
+# Replace HYDRA_TOKEN with: openssl rand -hex 32
+
+set -a
+. ./.env.deploy
+set +a
+HYDRA_TOKEN="$HYDRA_TOKEN" ./scripts/init-hydra-data.sh
+docker compose --env-file .env.deploy -f compose.vps.yml up -d --build
+DEPLOYMENT_URL=http://127.0.0.1:8787 npm run deploy:check
+```
+
+The public reverse proxy should route to `http://gentether-app:8787` on the existing `public_proxy` Docker network. HydraDB ports must not be published by the host or proxy.
+
 ## Agent integration through MCP
 
 Build once:
