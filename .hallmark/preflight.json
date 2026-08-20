@@ -1,0 +1,33 @@
+{
+  "scannedAt": "2026-08-20T00:00:00Z",
+  "scope": "single-page",
+  "framework": "Vanilla HTML, CSS, and browser JavaScript served by a Node.js HTTP server",
+  "signals": {
+    "designFile": null,
+    "existingPalette": "Dark graphite neutrals with an acid-lime accent",
+    "existingIcons": "@phosphor-icons/web 2.1.2 served locally",
+    "existingTypography": "Inter was hard-coded in CSS but not loaded by the project",
+    "existingMotion": "IntersectionObserver reveals plus scroll-event progress and parallax"
+  },
+  "conflicts": [
+    "Inter was declared without a font import or local package.",
+    "The scroll listener and parallax conflicted with Hallmark motion rules.",
+    "The page used a marketing-hero-first structure even though the working product UI is the strongest proof."
+  ],
+  "preserve": [
+    "Graphite and lime brand direction",
+    "Phosphor Icons",
+    "All API routes and working patch-gate behavior",
+    "BLOCK, REVIEW, and ALLOW scenarios",
+    "HydraDB engine status and lineage evidence"
+  ],
+  "introduce": [
+    "Workbench macrostructure",
+    "N8 terminal-command navigation",
+    "Ft2 inline-rule footer",
+    "IBM Plex Sans and JetBrains Mono pairing",
+    "OKLCH design tokens",
+    "Reveal-once motion without scroll listeners or parallax",
+    "Mobile verification at 320, 375, 414, and 768 pixels"
+  ]
+}
