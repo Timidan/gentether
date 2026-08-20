@@ -43,32 +43,53 @@ jobs:
           exit 1
       - name: Capture Hallmark desktop and mobile review frames
         run: |
+          npm install --no-save playwright-core@1.54.2
           mkdir -p hallmark-review
-          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          export BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
           test -n "$BROWSER"
-          capture() {
-            local width="$1"
-            local height="$2"
-            local url="$3"
-            local output="$4"
-            "$BROWSER" \
-              --headless=new \
-              --no-sandbox \
-              --disable-gpu \
-              --hide-scrollbars \
-              --run-all-compositor-stages-before-draw \
-              --virtual-time-budget=6500 \
-              --window-size="$width,$height" \
-              --screenshot="$output" \
-              "$url"
+          node --input-type=module <<'EOF'
+          import {chromium} from 'playwright-core';
+
+          const browser = await chromium.launch({
+            headless: true,
+            executablePath: process.env.BROWSER,
+            args: ['--no-sandbox', '--disable-gpu'],
+          });
+
+          async function capture({file, viewport, selector, trace = false}) {
+            const page = await browser.newPage({viewport});
+            await page.emulateMedia({reducedMotion: 'no-preference'});
+            await page.goto('http://127.0.0.1:8787', {waitUntil: 'domcontentloaded'});
+            await page.evaluate(() => document.fonts.ready);
+            await page.waitForTimeout(900);
+            if (selector) {
+              await page.locator(selector).scrollIntoViewIfNeeded();
+              await page.waitForTimeout(500);
+            }
+            if (trace) {
+              await page.locator('#trace').click();
+              await page.waitForTimeout(650);
+            }
+            const overflow = await page.evaluate(() => ({
+              viewport: window.innerWidth,
+              document: document.documentElement.scrollWidth,
+            }));
+            if (overflow.document > overflow.viewport + 1) {
+              throw new Error(`Horizontal overflow at ${viewport.width}px: ${JSON.stringify(overflow)}`);
+            }
+            await page.screenshot({path: file});
+            await page.close();
           }
-          capture 1440 1000 http://127.0.0.1:8787 hallmark-review/01-desktop-top.png
-          capture 1440 1000 http://127.0.0.1:8787/#gate hallmark-review/02-desktop-gate.png
-          capture 1440 1000 http://127.0.0.1:8787/#lineage hallmark-review/03-desktop-lineage.png
-          capture 768 1024 http://127.0.0.1:8787/#gate hallmark-review/04-tablet-768.png
-          capture 414 896 http://127.0.0.1:8787/#gate hallmark-review/05-mobile-414.png
-          capture 375 812 http://127.0.0.1:8787/#gate hallmark-review/06-mobile-375.png
-          capture 320 700 http://127.0.0.1:8787/#gate hallmark-review/07-mobile-320.png
+
+          await capture({file: 'hallmark-review/01-desktop-top.png', viewport: {width: 1440, height: 1000}});
+          await capture({file: 'hallmark-review/02-desktop-gate.png', viewport: {width: 1440, height: 1000}, selector: '#gate'});
+          await capture({file: 'hallmark-review/03-desktop-lineage.png', viewport: {width: 1440, height: 1000}, selector: '#lineage', trace: true});
+          await capture({file: 'hallmark-review/04-tablet-768.png', viewport: {width: 768, height: 1024}, selector: '#gate'});
+          await capture({file: 'hallmark-review/05-mobile-414.png', viewport: {width: 414, height: 896}, selector: '#gate'});
+          await capture({file: 'hallmark-review/06-mobile-375.png', viewport: {width: 375, height: 812}, selector: '#gate'});
+          await capture({file: 'hallmark-review/07-mobile-320.png', viewport: {width: 320, height: 700}, selector: '#gate'});
+          await browser.close();
+          EOF
       - uses: actions/upload-artifact@v4
         with:
           name: hallmark-workbench-ui-review
