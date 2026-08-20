@@ -21,8 +21,6 @@ const nodeIcons = {
 };
 
 const elements = {
-  scrollProgress: document.querySelector("#scroll-progress"),
-  topbar: document.querySelector("#topbar"),
   enginePill: document.querySelector("#engine-pill"),
   engineLabel: document.querySelector("#engine-label"),
   metrics: document.querySelector("#metrics"),
@@ -49,7 +47,7 @@ async function api(path, options) {
 }
 
 async function boot() {
-  setupCinematicMotion();
+  setupRevealMotion();
   try {
     const [status, generated] = await Promise.all([api("/api/status"), api("/api/generated")]);
     renderStatus(status);
@@ -65,7 +63,7 @@ function renderStatus(status) {
   elements.enginePill.classList.toggle("live", status.hydraConnected);
   elements.engineLabel.textContent = status.hydraConnected ? "HydraDB · live" : "Deterministic fallback · local";
   const values = [status.stats.files, status.stats.generatedFiles, status.stats.relationships];
-  elements.metrics.querySelectorAll("strong").forEach((element, index) => {
+  elements.metrics.querySelectorAll("dd").forEach((element, index) => {
     element.textContent = String(values[index] ?? "—");
   });
 }
@@ -107,9 +105,9 @@ function renderDecision(result) {
   elements.decisionEngine.textContent = `${result.engine} evidence`;
 
   const summaries = {
-    BLOCK: "The patch targets a derived artifact without changing its authoritative source.",
-    REVIEW: "The provenance chain is incomplete or regenerated outputs are missing.",
-    ALLOW: "The proposed patch is structurally consistent with the generation graph.",
+    BLOCK: "Wrong file. Change the source and regenerate this artifact.",
+    REVIEW: "The source changed, but its generated output is missing.",
+    ALLOW: "Source and generated output move together. Run the checks.",
   };
   elements.decisionSummary.textContent = summaries[result.decision];
   elements.reasonList.innerHTML = result.reasons
@@ -176,7 +174,7 @@ function renderLineage(result) {
     if (index > 0) {
       html += `
         <div class="graph-edge">
-          <span><i class="ph ph-arrow-down" aria-hidden="true"></i>${escapeHtml(step.edge ?? "REACHES")}</span>
+          <span><i class="ph ph-arrow-right" aria-hidden="true"></i>${escapeHtml(step.edge ?? "REACHES")}</span>
         </div>`;
     }
     const icon = nodeIcons[step.node.kind] ?? "ph-file";
@@ -215,55 +213,27 @@ function setLoading(element, loading) {
   element.classList.toggle("loading", loading);
 }
 
-function setupCinematicMotion() {
+function setupRevealMotion() {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  requestAnimationFrame(() => document.body.classList.add("is-ready"));
+  const revealElements = [...document.querySelectorAll(".reveal-on-scroll")];
 
-  const revealElements = [...document.querySelectorAll("[data-reveal]")];
   if (reducedMotion || !("IntersectionObserver" in window)) {
     revealElements.forEach((element) => element.classList.add("is-visible"));
-  } else {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -8% 0px" },
-    );
-    revealElements.forEach((element) => observer.observe(element));
+    return;
   }
 
-  let frameRequested = false;
-  const updateScrollMotion = () => {
-    frameRequested = false;
-    const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    const progress = Math.min(1, Math.max(0, window.scrollY / scrollable));
-    elements.scrollProgress.style.transform = `scaleX(${progress})`;
-    elements.topbar.classList.toggle("is-condensed", window.scrollY > 48);
-
-    if (!reducedMotion) {
-      document.querySelectorAll("[data-parallax]").forEach((element) => {
-        const factor = Number.parseFloat(element.dataset.parallax ?? "0");
-        const rect = element.getBoundingClientRect();
-        const distanceFromCenter = rect.top + rect.height / 2 - window.innerHeight / 2;
-        const offset = Math.max(-76, Math.min(76, distanceFromCenter * factor));
-        element.style.setProperty("--parallax-y", `${offset.toFixed(2)}px`);
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
       });
-    }
-  };
+    },
+    { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
+  );
 
-  const requestScrollUpdate = () => {
-    if (frameRequested) return;
-    frameRequested = true;
-    requestAnimationFrame(updateScrollMotion);
-  };
-
-  window.addEventListener("scroll", requestScrollUpdate, { passive: true });
-  window.addEventListener("resize", requestScrollUpdate);
-  updateScrollMotion();
+  revealElements.forEach((element) => observer.observe(element));
 }
 
 function escapeHtml(value) {
@@ -275,11 +245,11 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-document.querySelectorAll(".demo-tab").forEach((button) => {
+document.querySelectorAll(".scenario-tab").forEach((button) => {
   button.addEventListener("click", async () => {
     const example = button.dataset.example;
     if (!example || !examples[example]) return;
-    document.querySelectorAll(".demo-tab").forEach((candidate) => {
+    document.querySelectorAll(".scenario-tab").forEach((candidate) => {
       candidate.classList.remove("active");
       candidate.setAttribute("aria-selected", "false");
     });
