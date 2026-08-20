@@ -1,0 +1,50 @@
+/* Hallmark · component: graph-evidence · inherits tokens.css */
+
+.graph-flow {
+  grid-template-columns:
+    minmax(0, 1fr) minmax(2.5rem, 0.24fr)
+    minmax(0, 1fr) minmax(2.5rem, 0.24fr)
+    minmax(0, 1fr) minmax(2.5rem, 0.24fr)
+    minmax(0, 1fr) minmax(2.5rem, 0.24fr)
+    minmax(0, 1fr);
+}
+
+.graph-node,
+.graph-node.source_spec,
+.graph-node.generator_command,
+.graph-node.generated_file,
+.graph-node.test {
+  grid-column: auto;
+}
+
+.action-dock {
+  position: static;
+  margin-bottom: var(--space-2xl);
+}
+
+@media (max-width: 64rem) {
+  .graph-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .graph-node,
+  .graph-node.source_spec,
+  .graph-node.generator_command,
+  .graph-node.generated_file,
+  .graph-node.test {
+    min-height: 8rem;
+  }
+
+  .graph-edge {
+    min-height: var(--space-2xl);
+  }
+
+  .graph-edge span {
+    grid-auto-flow: column;
+    align-items: center;
+  }
+
+  .graph-edge i {
+    transform: rotate(90deg);
+  }
+}
