@@ -16,8 +16,11 @@ const required = [
   "LICENSE",
   "package.json",
   "public/index.html",
+  "public/tokens.css",
   "public/styles.css",
   "public/app.js",
+  ".hallmark/preflight.json",
+  ".hallmark/log.json",
   "docs/HACKATHON.md",
   "docs/ARCHITECTURE.md",
   "docs/HYDRA_QUERIES.md",
@@ -68,14 +71,33 @@ check("script:render", typeof packageJson.scripts?.["video:render"] === "string"
 check("script:live-hydra", typeof packageJson.scripts?.["verify:hydra"] === "string", "verify:hydra must exist");
 
 const uiHtml = readFileSync(path.join(root, "public/index.html"), "utf8");
+const uiTokens = readFileSync(path.join(root, "public/tokens.css"), "utf8");
 const uiCss = readFileSync(path.join(root, "public/styles.css"), "utf8");
 const uiJs = readFileSync(path.join(root, "public/app.js"), "utf8");
 const serverSource = readFileSync(path.join(root, "src/server.ts"), "utf8");
+
 check(
   "ui:phosphor-icons",
   uiHtml.includes("/vendor/phosphor/src/regular/style.css") && serverSource.includes("@phosphor-icons"),
   "Phosphor Icons must be served locally from the pinned package",
 );
+check("hallmark:stamp", uiCss.includes("Hallmark · genre:") && uiCss.includes("macrostructure: Workbench"), "CSS must carry the Hallmark macrostructure stamp");
+check("hallmark:critique", /Hallmark · pre-emit critique: P[3-5] H[3-5] E[3-5] S[3-5] R[3-5] V[3-5]/.test(uiCss), "all six critique scores must be at least 3");
+check("hallmark:tokens", uiTokens.includes("oklch(") && uiTokens.includes("--font-display") && uiTokens.includes("--space-4xl"), "tokens.css must contain OKLCH, typography, and spacing tokens");
+check("hallmark:locked-colors", !/(#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|oklch\()/i.test(uiCss), "styles.css must reference named colour tokens instead of literal colours");
+check("hallmark:locked-fonts", !/font-family:\s*(?!var\()/i.test(uiCss), "styles.css must reference named font tokens only");
+check("hallmark:no-italic-heads", !/h[1-6][^{]*\{[^}]*font-style:\s*italic/is.test(uiCss), "display headings must remain roman");
+check("hallmark:root-clip", /html,\s*\nbody\s*\{[^}]*overflow-x:\s*clip/is.test(uiCss), "html and body must use overflow-x: clip");
+check("hallmark:no-root-hidden", !/overflow-x:\s*hidden/i.test(uiCss), "overflow-x: hidden is forbidden because it breaks sticky descendants");
+check("hallmark:display-wrap", /h1,\s*\nh2,\s*\nh3[\s\S]*overflow-wrap:\s*anywhere/i.test(uiCss), "display headings must wrap long words safely");
+check("hallmark:mobile-320", uiCss.includes("25.875rem") && uiCss.includes("48rem"), "responsive rules must cover 320–414 and 768 pixel widths");
+check("hallmark:clickable-one-line", uiCss.includes("white-space: nowrap") && uiCss.includes(".scenario-tab"), "primary clickable labels must stay on one line");
+check("hallmark:reveal-once", uiJs.includes("IntersectionObserver") && uiJs.includes("observer.unobserve"), "scroll motion must reveal once through IntersectionObserver");
+check("hallmark:no-scroll-listener", !/addEventListener\(["']scroll["']/i.test(uiJs), "scroll event listeners are forbidden");
+check("hallmark:no-parallax", !/(data-parallax|parallax-y|requestScrollUpdate)/i.test(`${uiHtml}\n${uiCss}\n${uiJs}`), "parallax and scroll-scrubbed motion are forbidden");
+check("hallmark:reduced-motion", uiCss.includes("@media (prefers-reduced-motion: reduce)"), "motion must include a reduced-motion path");
+check("hallmark:no-fullscreen-sentence", !/min-height:\s*(?:100vh|100svh)/i.test(uiCss), "do not use a full-screen hero with one centred sentence");
+check("hallmark:no-ad-hoc-z", !/z-index:\s*(?:999|9999|99999)/i.test(uiCss), "z-index must use the named scale");
 check(
   "ui:no-css-gradients",
   !/(?:linear|radial|conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(uiCss),
@@ -87,16 +109,7 @@ check(
   "status and tab states must use meaningful icons instead of decorative dots",
 );
 check("ui:no-pill-overuse", !/border-radius:\s*999px/i.test(uiCss), "the UI must not rely on pill-shaped controls");
-check(
-  "ui:cinematic-scroll",
-  uiJs.includes("IntersectionObserver") && uiJs.includes("data-parallax") && uiJs.includes("scroll-progress"),
-  "scroll reveal, parallax, and document progress behavior must be present",
-);
-check(
-  "ui:reduced-motion",
-  uiCss.includes("@media (prefers-reduced-motion: reduce)"),
-  "cinematic motion must include a reduced-motion path",
-);
+
 try {
   execFileSync(process.execPath, ["--check", "public/app.js"], {
     cwd: root,
